@@ -2,7 +2,7 @@
 
 <style>
   .footer {
-    background: #ffe6f0;
+    background:rgb(255, 255, 255);
     padding: 40px 20px 20px;
     color: #444;
     font-family: 'Poppins', sans-serif;
@@ -18,7 +18,7 @@
   }
 
   .footer h4 {
-    color: #c2185b;
+    color: #56c8d8;
     margin-bottom: 15px;
     font-size: 18px;
   }
@@ -43,7 +43,7 @@
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    color: #c2185b;
+    color: #c0392b;
     font-weight: 500;
   }
 
@@ -74,7 +74,7 @@
     <!-- Column 1: About -->
     <div class="footer-col">
     <h4 style="font-family: 'Dancing Script', cursive; font-size: 2rem; display: flex; align-items: center;">
-  <span style="color: #56c8d8;">Sefar</span><span style="color: #c0392b;">Gifts</span>
+  <span style="color: #56c8d8;">Gift</span><span style="color: #c0392b;">Me</span>
 </h4>
 
       <p>

@@ -2,6 +2,9 @@
   body {
     font-family: 'Poppins', sans-serif;
   }
+  nav {
+    box-shadow: 0 1px 10px rgba(0, 0, 0, 0.05) !important;
+  }
 </style>
 <!-- WORKING NAVBAR WITH MATERIALIZE 1.0.0 -->
 
@@ -11,30 +14,29 @@
 <link href="https://fonts.googleapis.com/css2?family=Dancing+Script&display=swap" rel="stylesheet">
 
 <!-- NAVBAR -->
-<div class="navbar-fixed">
-  <nav class="pink lighten-5">
+<div class="navbar">
+  <nav class="white lighten-5">
     <div class="nav-wrapper container">
       <a href="index.php" class="brand-logo" style="display: flex; align-items: center; height: 100%;">
-        <span style="color: #56c8d8; font-family: 'Dancing Script', cursive; font-size: 2.3rem;">Sefar</span>
-        <span style="color: #c0392b; font-family: 'Dancing Script', cursive; font-size: 2.3rem;">Gifts</span>
+        <img src="Screenshots/logo.png" alt="Logo" style="height: 60px; margin-right: 10px;">
       </a>
 
       <a href="#" data-target="mobile-demo" class="sidenav-trigger right"><i
           class="material-icons pink-text text-darken-2">menu</i></a>
 
       <ul class="right hide-on-med-and-down">
-        <li><a href="index.php" class="pink-text text-darken-2">Home</a></li>
-        <li><a href="products.php" class="pink-text text-darken-2">Products</a></li>
-        <li><a href="aboutus.php" class="pink-text text-darken-2">About Us</a></li>
-        <li><a href="contactus.php" class="pink-text text-darken-2">Contact Us</a></li>
+      <li><a href="index.php" class="navbar-link">Home</a></li>
+        <li><a href="products.php" class="pink-text ">Products</a></li>
+        <li><a href="aboutus.php" class="pink-text ">About Us</a></li>
+        <li><a href="contactus.php" class="pink-text ">Contact Us</a></li>
         <?php if (isset($_SESSION['userid'])): ?>
-          <li><a class="dropdown-trigger pink-text text-darken-2" href="#!"
+          <li><a class="dropdown-trigger pink-text " href="#!"
               data-target="dropdown2"><?php echo $_SESSION['userid']; ?><i
                 class="material-icons right">arrow_drop_down</i></a></li>
         <?php else: ?>
-          <li><a href="login.php" class="pink-text text-darken-2">Login</a></li>
+          <li><a href="login.php" class="pink-text ">Login</a></li>
         <?php endif; ?>
-        <li><a href="shopping_cart.php"><i class="material-icons pink-text text-darken-2">shopping_cart</i></a></li>
+        <li><a href="shopping_cart.php"><i class="material-icons pink-text">shopping_cart</i></a></li>
       </ul>
     </div>
   </nav>

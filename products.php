@@ -72,36 +72,40 @@ $categories = $conn->query("SELECT DISTINCT category FROM products ORDER BY cate
   <title>Products - GiftStore</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    input[type="text"] {
+      border: none !important;
+      box-shadow: none !important;
+    }
+  </style>
 </head>
 
 <body class="bg-gray-100">
   <?php include("navbar.php"); ?>
 
-  <div class="container mx-auto px-4 py-10">
+  <div class="mx-20 px-4 py-20">
     <h2 class="text-3xl font-bold text-center text-gray-800 mb-6">🛍️ Explore Products</h2>
 
-    <!-- Filter/Search/Sort Controls -->
-    <form method="GET" class="flex flex-wrap justify-center gap-4 mb-6">
-      <select name="category" class="border px-4 py-2 rounded">
-        <option value="">All Categories</option>
-        <?php while ($cat = $categories->fetch_assoc()): ?>
-          <option value="<?= htmlspecialchars($cat['category']) ?>" <?= $filter === $cat['category'] ? 'selected' : '' ?>>
-            <?= htmlspecialchars($cat['category']) ?>
-          </option>
-        <?php endwhile; ?>
-      </select>
+    <form method="GET" class="flex items-center justify-center gap-4 mb-6">
+  <div class="flex items-center w-full sm:w-[30rem] bg-white border-2 border-[#56c8d8] rounded-full shadow px-4 h-12 focus-within:ring-2 focus-within:ring-[#c0392b] transition">
+    <input
+      type="text"
+      name="search"
+      value="<?= htmlspecialchars($search) ?>"
+      placeholder="Search products..."
+      class="flex-1 bg-transparent border-none outline-none appearance-none text-gray-700 placeholder:text-gray-400 text-sm h-full leading-[3rem]"
+    />
+    <button
+      type="submit"
+      class="ml-2 bg-[#c0392b] hover:bg-red-700 text-white text-sm font-semibold px-5 h-9 rounded-full transition"
+    >
+      Search
+    </button>
+  </div>
+</form>
 
-      <input type="text" name="search" placeholder="Search products..." value="<?= htmlspecialchars($search) ?>"
-        class="border px-4 py-2 rounded w-48">
 
-      <select name="sort" class="border px-4 py-2 rounded">
-        <option value="">Sort by</option>
-        <option value="price_asc" <?= $sort === 'price_asc' ? 'selected' : '' ?>>Price: Low to High</option>
-        <option value="price_desc" <?= $sort === 'price_desc' ? 'selected' : '' ?>>Price: High to Low</option>
-      </select>
 
-      <button type="submit" class="bg-emerald-600 text-white px-4 py-2 rounded hover:bg-emerald-700">Apply</button>
-    </form>
 
     <!-- Product Grid -->
     <?php if ($products->num_rows > 0): ?>
