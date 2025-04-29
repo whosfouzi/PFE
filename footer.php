@@ -1,111 +1,78 @@
-<link href="https://fonts.googleapis.com/css2?family=Dancing+Script&display=swap" rel="stylesheet">
+<footer class="page-footer white" style="font-family: 'Poppins', sans-serif; box-shadow: 0 -2px 8px rgba(0,0,0,0.05); padding-top: 40px;">
+  <div class="container">
+    <div class="row" style="margin-bottom: 40px;">
+      <!-- About -->
+      <div class="col s12 m4" style="margin-bottom: 30px;">
+        <h5 style="color: #56c8d8; font-family: 'Dancing Script', cursive; font-size: 2rem; margin-bottom: 15px;">
+          Sefar<span style="color:rgb(255, 25, 0);">Gifts</span>
+        </h5>
+        <p style="color: #333; font-weight: 400; font-size: 14px;">
+          A curated gift destination for every occasion.<br>
+          Safe payment, fast delivery, and thoughtful packaging.<br>
+          Your joy is our priority.
+        </p>
+      </div>
 
-<style>
-  .footer {
-    background:rgb(255, 255, 255);
-    padding: 40px 20px 20px;
-    color: #444;
-    font-family: 'Poppins', sans-serif;
-  }
+      <!-- Quick Links -->
+      <div class="col s12 m4" style="margin-bottom: 30px;">
+        <h5 style="color: #56c8d8; font-weight: 600; font-size: 1.5rem; margin-bottom: 15px;">Quick Links</h5>
+        <ul style="list-style: none; padding: 0;">
+          <li><a href="index.php" class="quick-link">Home</a></li>
+          <li><a href="aboutus.php" class="quick-link">About Us</a></li>
+          <li><a href="contactus.php" class="quick-link">Contact Us</a></li>
+          <li><a href="signup.php" class="quick-link">Create Account</a></li>
+        </ul>
+      </div>
 
-  .footer .footer-container {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: space-between;
-    max-width: 1200px;
-    margin: 0 auto;
-    gap: 30px;
-  }
-
-  .footer h4 {
-    color: #56c8d8;
-    margin-bottom: 15px;
-    font-size: 18px;
-  }
-
-  .footer p, .footer a {
-    font-size: 14px;
-    line-height: 1.6;
-    color: #333;
-    text-decoration: none;
-  }
-
-  .footer a:hover {
-    color: #e91e63;
-  }
-
-  .footer .footer-col {
-    flex: 1 1 250px;
-  }
-
-  .footer .social a {
-    margin-right: 12px;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    color: #c0392b;
-    font-weight: 500;
-  }
-
-  .footer-bottom {
-    border-top: 1px solid #f9cbd8;
-    text-align: center;
-    padding-top: 15px;
-    margin-top: 30px;
-    font-size: 13px;
-    color: #777;
-  }
-
-  @media (max-width: 768px) {
-    .footer .footer-container {
-      flex-direction: column;
-      text-align: center;
-    }
-
-    .footer .social {
-      justify-content: center;
-    }
-  }
-</style>
-
-<footer class="footer">
-  <div class="footer-container">
-    
-    <!-- Column 1: About -->
-    <div class="footer-col">
-    <h4 style="font-family: 'Dancing Script', cursive; font-size: 2rem; display: flex; align-items: center;">
-  <span style="color: #56c8d8;">Gift</span><span style="color: #c0392b;">Me</span>
-</h4>
-
-      <p>
-        A curated gift destination for every occasion.<br>
-        Safe payment, fast delivery, and thoughtful packaging.<br>
-        Your joy is our priority.
-      </p>
-    </div>
-
-    <!-- Column 2: Links -->
-    <div class="footer-col">
-      <h4>Quick Links</h4>
-      <p><a href="index.php">Home</a></p>
-      <p><a href="about.php">About Us</a></p>
-      <p><a href="contact.php">Contact Us</a></p>
-      <p><a href="signup.php">Create Account</a></p>
-    </div>
-
-    <!-- Column 3: Connect -->
-    <div class="footer-col">
-      <h4>Connect</h4>
-      <p>Developed by Slimani Faouzi</p>
-      <div class="social">
-        <a href="#"><img src="https://img.icons8.com/ios-filled/20/000000/facebook--v1.png"/> Facebook</a>
-        <a href="mailto:you@example.com"><img src="https://img.icons8.com/ios-filled/20/000000/email-open.png"/> Email</a>
+      <!-- Connect -->
+      <div class="col s12 m4" style="margin-bottom: 30px;">
+        <h5 style="color: #56c8d8; font-weight: 600; font-size: 1.5rem; margin-bottom: 15px;">Connect</h5>
+        <p style="color: #333; font-weight: 400; font-size: 14px;">Developed by Slimani Faouzi</p>
+        <p>
+          <a href="#" style="color: #c0392b; font-weight: 500; display: inline-flex; align-items: center;">
+            <i class="material-icons left">facebook</i>Facebook
+          </a><br>
+          <a href="#" style="color: #c0392b; font-weight: 500; display: inline-flex; align-items: center;">
+            <i class="material-icons left">email</i>Email
+          </a>
+        </p>
       </div>
     </div>
   </div>
 
-  <!-- Bottom Line -->
-  <div class="footer-bottom">
-    &copy; <?= date('Y') ?> GiftStore. All rights reserved.
+  <div style="border-top: 1px solid #ffc0cb; margin-top: 20px;"></div>
+  <div class="footer-copyright white" style="padding: 15px 0;">
+    <div class="container center-align" style="color: #999; font-size: 13px;">
+      © 2025 GiftStore. All rights reserved.
+    </div>
   </div>
+
+  <style>
+    .quick-link {
+      color: #333;
+      font-weight: 500;
+      transition: color 0.3s;
+      display: inline-block;
+      margin-bottom: 8px;
+    }
+
+    .quick-link:hover {
+      color: #c0392b;
+    }
+
+    html, body {
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      margin: 0;
+    }
+
+    main {
+      flex: 1 0 auto;
+    }
+
+    footer {
+      flex-shrink: 0;
+    }
+  </style>
 </footer>

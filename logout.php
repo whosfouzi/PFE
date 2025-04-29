@@ -1,13 +1,15 @@
 <?php
- session_start();
+session_start();
+unset($_SESSION["userid"]);
+unset($_SESSION["name"]);
+unset($_SESSION["email"]);
+unset($_SESSION["phone"]);
+unset($_SESSION["address"]);
+unset($_SESSION["total_amt"]);
+unset($_SESSION["id"]);
+unset($_SESSION["role"]);
 
-  echo "Logout Successfully ";
-  unset($_SESSION["userid"]);
-  unset($_SESSION["name"]);
-  unset($_SESSION["email"]);
-  unset($_SESSION["phone"]);
-  unset($_SESSION["address"]);
-  unset($_SESSION["total_amt"]);
-  session_destroy();   // function that Destroys Session 
-  header("Location: index.php");
+header("Location: index.php");
+exit();
+
 ?>

@@ -1,66 +1,100 @@
 <?php
-$total=0;
 session_start();
-if(isset($_POST["add_to_cart"]))
-{
-  if(isset($_SESSION["shopping_cart"]))
-  {
-    $item_array_id = array_column($_SESSION["shopping_cart"], "item_id"); 
-    $item_array_category = array_column($_SESSION["shopping_cart"], "item_category");
-    if (!in_array($_GET["id"], $item_array_id)) {
-      $count1 = count($_SESSION["shopping_cart"]);
-      $item_array = array(
-        'item_id' => $_GET["id"],
-        'item_name' => $_POST["hidden_name"],
-        'item_price' => $_POST["hidden_price"],
-        'item_image' => $_POST["hidden_img_id"],
-        'item_category' => $_POST["hidden_category"],
-        'item_quantity' => $_POST["item_quantity"]
-      );
-      $_SESSION["shopping_cart"][$count1] = $item_array;
+
+$db = new mysqli("localhost", "root", "", "giftstore");
+if ($db->connect_error) {
+    die("Connection failed: " . $db->connect_error);
+}
+
+if (isset($_POST["add_to_cart"]) && isset($_SESSION["id"])) {
+    $userId = $_SESSION["id"];
+    $productId = $_GET["id"];
+    $quantity = $_POST["item_quantity"];
+
+    // Check if cart exists for user
+    $stmt = $db->prepare("SELECT id FROM cart WHERE user_id = ?");
+    $stmt->bind_param("i", $userId);
+    $stmt->execute();
+    $stmt->store_result();
+    if ($stmt->num_rows === 0) {
+        $stmt_insert = $db->prepare("INSERT INTO cart (user_id) VALUES (?)");
+        $stmt_insert->bind_param("i", $userId);
+        $stmt_insert->execute();
+        $cartId = $stmt_insert->insert_id;
+        $stmt_insert->close();
     } else {
-      foreach ($_SESSION["shopping_cart"] as $keys => $values) {
-        if ($values["item_id"] == $_GET["id"]) {
-          $item_array = array(
-            'item_id' => $_GET["id"],
-            'item_name' => $_POST["hidden_name"],
-            'item_price' => $_POST["hidden_price"],
-            'item_image' => $_POST["hidden_img_id"],
-            'item_category' => $_POST["hidden_category"],
-            'item_quantity' => $_POST["item_quantity"]  // ✅ Respect quantity from input
-          );
-          $_SESSION["shopping_cart"]["$keys"] = $item_array;
-        }
-      }
+        $stmt->bind_result($cartId);
+        $stmt->fetch();
     }
-    
-  }
-  else
-  {
-    $item_array=array(
-      'item_id' => $_GET["id"],
-      'item_name' => $_POST["hidden_name"],
-      'item_price' => $_POST["hidden_price"],
-      'item_category' => $_POST["hidden_category"],
-      'item_image' => $_POST["hidden_img_id"],
-      'item_quantity' => 1
-    );
-    $_SESSION["shopping_cart"][0] = $item_array;
-  }
-}
-if(isset($_GET["action"]) && $_GET["action"]=="delete")
-{
-  foreach ($_SESSION["shopping_cart"] as $keys => $values)
-  {
-    if($values["item_id"]==$_GET["id"])
-    {
-      unset($_SESSION["shopping_cart"][$keys]);
-      header("Location: shopping_cart.php");
-      exit();
+    $stmt->close();
+
+    // Add or update cart items
+    $stmt = $db->prepare("SELECT id, quantity FROM cart_items WHERE cart_id = ? AND product_id = ?");
+    $stmt->bind_param("ii", $cartId, $productId);
+    $stmt->execute();
+    $stmt->store_result();
+    if ($stmt->num_rows > 0) {
+        $stmt->bind_result($itemId, $existingQuantity);
+        $stmt->fetch();
+        $newQuantity = $existingQuantity + $quantity;
+        $stmt_update = $db->prepare("UPDATE cart_items SET quantity = ? WHERE id = ?");
+        $stmt_update->bind_param("ii", $newQuantity, $itemId);
+        $stmt_update->execute();
+        $stmt_update->close();
+    } else {
+        $stmt_insert_item = $db->prepare("INSERT INTO cart_items (cart_id, product_id, quantity) VALUES (?, ?, ?)");
+        $stmt_insert_item->bind_param("iii", $cartId, $productId, $quantity);
+        $stmt_insert_item->execute();
+        $stmt_insert_item->close();
     }
-  }
+    $stmt->close();
 }
+
+// Fetch cart for display
+if (isset($_SESSION['id'])) {
+    $stmt = $db->prepare("
+        SELECT p.id as item_id, p.name as item_name, p.price as item_price, ci.quantity as item_quantity, p.category as item_category
+        FROM cart_items ci
+        JOIN cart c ON ci.cart_id = c.id
+        JOIN products p ON ci.product_id = p.id
+        WHERE c.user_id = ?
+    ");
+    $stmt->bind_param("i", $_SESSION['id']);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $_SESSION["shopping_cart"] = $result->fetch_all(MYSQLI_ASSOC);
+    $stmt->close();
+} else {
+    $_SESSION["shopping_cart"] = [];
+}
+
+// Handle remove from cart
+if (isset($_GET['action']) && $_GET['action'] == 'delete' && isset($_GET['id']) && isset($_SESSION['id'])) {
+  $productId = $_GET['id'];
+  $userId = $_SESSION['id'];
+
+  // Find the user's cart
+  $stmt = $db->prepare("SELECT id FROM cart WHERE user_id = ?");
+  $stmt->bind_param("i", $userId);
+  $stmt->execute();
+  $stmt->bind_result($cartId);
+  $stmt->fetch();
+  $stmt->close();
+
+  if ($cartId) {
+      // Delete the product from cart_items
+      $del = $db->prepare("DELETE FROM cart_items WHERE cart_id = ? AND product_id = ?");
+      $del->bind_param("ii", $cartId, $productId);
+      $del->execute();
+      $del->close();
+  }
+
+  header("Location: shopping_cart.php");
+  exit();
+}
+
 ?>
+
 <!DOCTYPE html>
 <html>
 <head>
@@ -73,61 +107,74 @@ if(isset($_GET["action"]) && $_GET["action"]=="delete")
 
 <?php include("navbar.php"); ?>
 
-<div class="container mx-auto px-4 py-10">
-  <h2 class="text-3xl font-bold mb-6 text-center text-gray-800">🛒 Your Cart</h2>
+<div class="container" style="margin: 40px auto; padding: 20px;">
+  <h2 class="center-align" style="font-size: 2.2rem; font-weight: bold; margin-bottom: 30px; color: #333;">
+    🛒 Your Cart
+  </h2>
 
   <?php if (!empty($_SESSION['shopping_cart'])): ?>
-  <div class="overflow-x-auto bg-white shadow rounded-lg">
-    <table class="min-w-full text-sm text-left">
-      <thead class="bg-pink-100 text-pink-700">
-        <tr>
-          <th class="px-6 py-3">Product</th>
-          <th class="px-6 py-3">Category</th>
-          <th class="px-6 py-3">Price</th>
-          <th class="px-6 py-3">Quantity</th>
-          <th class="px-6 py-3">Total</th>
-          <th class="px-6 py-3">Action</th>
-        </tr>
-      </thead>
-      <tbody class="divide-y divide-gray-200">
-        <?php
-        $total = 0;
-        foreach ($_SESSION["shopping_cart"] as $item):
-          $item_total = $item["item_quantity"] * $item["item_price"];
-          $total += $item_total;
-        ?>
-        <tr>
-          <td class="px-6 py-4"><?= htmlspecialchars($item["item_name"]) ?></td>
-          <td class="px-6 py-4"><?= htmlspecialchars($item["item_category"]) ?></td>
-          <td class="px-6 py-4">€<?= number_format($item["item_price"], 2) ?></td>
-          <td class="px-6 py-4"><?= $item["item_quantity"] ?></td>
-          <td class="px-6 py-4">€<?= number_format($item_total, 2) ?></td>
-          <td class="px-6 py-4">
-            <a href="shopping_cart.php?action=delete&id=<?= $item["item_id"] ?>"
-               class="text-red-600 hover:text-red-800 font-medium">Remove</a>
-          </td>
-        </tr>
-        <?php endforeach; ?>
-        <tr class="bg-pink-50 font-semibold">
-          <td colspan="4" class="px-6 py-4 text-right">Total:</td>
-          <td class="px-6 py-4">€<?= number_format($total, 2) ?></td>
-          <td></td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
+    <div class="card white z-depth-1" style="border-radius: 12px; overflow: hidden; padding: 30px;">
+      <table class="highlight responsive-table">
+        <thead style="background-color: #56c8d8; color: white;">
+          <tr>
+            <th>Product</th>
+            <th>Category</th>
+            <th>Price</th>
+            <th>Quantity</th>
+            <th>Total</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          <?php
+          $total = 0;
+          foreach ($_SESSION["shopping_cart"] as $item):
+            $item_total = $item["item_quantity"] * $item["item_price"];
+            $total += $item_total;
+          ?>
+            <tr>
+              <td><?= htmlspecialchars($item["item_name"]) ?></td>
+              <td><?= htmlspecialchars($item["item_category"]) ?></td>
+              <td>€<?= number_format($item["item_price"], 2) ?></td>
+              <td><?= (int)$item["item_quantity"] ?></td>
+              <td>€<?= number_format($item_total, 2) ?></td>
+              <td>
+                <a href="shopping_cart.php?action=delete&id=<?= $item["item_id"] ?>" 
+                   class="red-text text-darken-1" style="font-weight: 600;">Remove</a>
+              </td>
+            </tr>
+          <?php endforeach; ?>
+          <tr style="font-weight: bold;">
+            <td colspan="4" class="right-align">Total:</td>
+            <td>€<?= number_format($total, 2) ?></td>
+            <td></td>
+          </tr>
+        </tbody>
+      </table>
 
-  <div class="flex justify-end mt-6">
-    <a href="checkout.php" class="bg-pink-600 text-white px-6 py-3 rounded hover:bg-pink-700 shadow">
-      Proceed to Checkout
-    </a>
-  </div>
+      <div class="right-align" style="margin-top: 30px;">
+        <a href="checkout.php" class="btn" style="background-color: #c0392b; font-weight: 600;">
+          Proceed to Checkout
+        </a>
+      </div>
+    </div>
 
   <?php else: ?>
-  <div class="bg-white p-6 rounded-lg shadow text-center">
-    <p class="text-lg font-semibold text-gray-600">Your cart is empty 🛍️</p>
-    <a href="index.php" class="mt-4 inline-block bg-pink-600 text-white px-6 py-2 rounded hover:bg-pink-700">Back to Shop</a>
-  </div>
+    <div class="row">
+      <div class="col s12">
+        <section class="empty-cart-wrap" style="background-image: url('https://sugarwish.com/images/empty-cart-bg.png'); background-size: cover; background-position: center; padding: 100px 20px; border-radius: 12px; text-align: center;">
+          <p style="font-size: 24px; font-weight: 600; color: #333;">
+            Hold your horses!<br>
+            You haven’t added anything to your cart.
+          </p>
+          <div style="margin-top: 20px;">
+            <a href="products.php" class="btn white red-text text-darken-2 z-depth-0" style="border: 2px solid #c0392b; font-weight: 600;">
+              Get Started
+            </a>
+          </div>
+        </section>
+      </div>
+    </div>
   <?php endif; ?>
 </div>
 

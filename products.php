@@ -6,12 +6,18 @@ $conn = new mysqli("localhost", "root", "", "giftstore");
 $page = max(1, intval($_GET['page'] ?? 1));
 $limit = 8;
 $offset = ($page - 1) * $limit;
-
+$types = '';
 // Handle filters
 $filter = $_GET['category'] ?? '';
 $search = $_GET['search'] ?? '';
 $sort = $_GET['sort'] ?? '';
-$order = 'ORDER BY name ASC';
+$allowed_sorts = [
+  'name_asc' => 'ORDER BY name ASC',
+  'price_asc' => 'ORDER BY price ASC',
+  'price_desc' => 'ORDER BY price DESC'
+];
+$order = $allowed_sorts[$sort] ?? 'ORDER BY name ASC';
+
 
 if ($sort === 'price_asc') {
   $order = 'ORDER BY price ASC';
@@ -19,10 +25,17 @@ if ($sort === 'price_asc') {
   $order = 'ORDER BY price DESC';
 }
 
-// Build condition string
 $conditions = [];
 $params = [];
 $types = '';
+// Build condition string
+
+$gift_filter = $_GET['gift'] ?? '';
+if ($gift_filter !== '') {
+  $conditions[] = 'gift_category = ?';
+  $params[] = $gift_filter;
+  $types .= 's';
+}
 
 if ($filter !== '') {
   $conditions[] = 'category = ?';
@@ -51,10 +64,10 @@ $total_pages = ceil($total_rows / $limit);
 $sql = "SELECT * FROM products $where $order LIMIT ? OFFSET ?";
 $stmt = $conn->prepare($sql);
 if ($params) {
-  $types .= 'ii';
-  $params[] = $limit;
-  $params[] = $offset;
-  $stmt->bind_param($types, ...$params);
+  $final_types = $types . 'ii';
+  $final_params = array_merge($params, [$limit, $offset]);
+  $stmt->bind_param($final_types, ...$final_params);
+
 } else {
   $stmt->bind_param("ii", $limit, $offset);
 }
@@ -63,6 +76,23 @@ $products = $stmt->get_result();
 
 // Fetch category list
 $categories = $conn->query("SELECT DISTINCT category FROM products ORDER BY category ASC");
+$categoryList = [];
+if ($categories && $categories->num_rows > 0) {
+  while ($row = $categories->fetch_assoc()) {
+    $categoryList[] = $row['category'];
+  }
+}
+// Fetch distinct gift categories
+$cat_stmt = $conn->prepare("SELECT DISTINCT gift_category FROM products WHERE gift_category IS NOT NULL AND gift_category != ''");
+$cat_stmt->execute();
+$cat_result = $cat_stmt->get_result();
+$gift_categories = [];
+
+while ($row = $cat_result->fetch_assoc()) {
+  $gift_categories[] = $row['gift_category'];
+}
+$cat_stmt->close();
+
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -87,93 +117,112 @@ $categories = $conn->query("SELECT DISTINCT category FROM products ORDER BY cate
     <h2 class="text-3xl font-bold text-center text-gray-800 mb-6">🛍️ Explore Products</h2>
 
     <form method="GET" class="flex items-center justify-center gap-4 mb-6">
-  <div class="flex items-center w-full sm:w-[30rem] bg-white border-2 border-[#56c8d8] rounded-full shadow px-4 h-12 focus-within:ring-2 focus-within:ring-[#c0392b] transition">
-    <input
-      type="text"
-      name="search"
-      value="<?= htmlspecialchars($search) ?>"
-      placeholder="Search products..."
-      class="flex-1 bg-transparent border-none outline-none appearance-none text-gray-700 placeholder:text-gray-400 text-sm h-full leading-[3rem]"
-    />
-    <button
-      type="submit"
-      class="ml-2 bg-[#c0392b] hover:bg-red-700 text-white text-sm font-semibold px-5 h-9 rounded-full transition"
-    >
-      Search
-    </button>
-  </div>
-</form>
-
-
-
-
-    <!-- Product Grid -->
-    <?php if ($products->num_rows > 0): ?>
-      <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-        <?php while ($prod = $products->fetch_assoc()): ?>
-          <div
-            class="bg-white p-6 rounded-2xl shadow-md hover:shadow-xl transition-transform transform hover:-translate-y-1">
-            <img src="uploads/<?= htmlspecialchars($prod['image']) ?>" alt="<?= htmlspecialchars($prod['name']) ?>"
-              class="w-full h-60 object-cover rounded-xl mb-4 shadow-sm">
-            <h3 class="text-xl font-bold text-gray-800 mb-2"><?= htmlspecialchars($prod['name']) ?></h3>
-            <p class="text-base text-gray-500 mb-2"><?= htmlspecialchars($prod['category']) ?></p>
-            <p class="text-yellow-600 font-bold mb-2">€<?= number_format($prod['price'], 2) ?></p>
-
-            <?php
-            $stock = $prod['stock'];
-            $stock_class = $stock == 0 ? 'bg-red-500' : ($stock < 5 ? 'bg-yellow-400' : 'bg-green-500');
-            $stock_text = $stock == 0 ? 'Out of Stock' : ($stock < 5 ? 'Low Stock' : 'In Stock');
-            ?>
-            <div class="mb-2">
-              <span class="text-white text-xs px-2 py-1 rounded-full <?= $stock_class ?>">
-                <?= $stock_text ?>
-              </span>
-            </div>
-
-
-            <button onclick='openProductModal({
-    id: <?= $prod["id"] ?>,
-    name: "<?= htmlspecialchars($prod["name"]) ?>",
-    category: "<?= htmlspecialchars($prod["category"]) ?>",
-    price: <?= $prod["price"] ?>,
-    stock: <?= $prod["stock"] ?>,
-    image: "<?= htmlspecialchars($prod["image"]) ?>",
-    description: "<?= htmlspecialchars($prod["description"] ?? '') ?>"
-  })' class="w-full mb-2 bg-gray-100 hover:bg-gray-200 text-sm py-2 rounded">View Details</button>
-            <form method="post" action="shopping_cart.php?action=add&id=<?= $prod["id"]; ?>">
-              <input type="hidden" name="hidden_name" value="<?= htmlspecialchars($prod["name"]) ?>" />
-              <input type="hidden" name="hidden_price" value="<?= $prod["price"] ?>" />
-              <input type="hidden" name="hidden_img_id" value="<?= $prod["image"] ?>" />
-              <input type="hidden" name="hidden_category" value="<?= $prod["category"] ?>" />
-
-              <input type="number" name="item_quantity" value="1" min="1" max="<?= $prod['stock'] ?>"
-                oninput="checkMaxQuantity(this, <?= $prod['stock'] ?>)"
-                class="w-20 px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none mb-2" />
-              <small class="text-red-500 text-xs hidden" id="warning-main-<?= $prod['id'] ?>">You've reached the maximum
-                quantity available.</small>
-
-              <button type="submit" name="add_to_cart"
-                class="w-full bg-emerald-600 text-white py-2 rounded hover:bg-emerald-700 <?= $stock == 0 ? 'opacity-50 cursor-not-allowed' : '' ?>"
-                <?= $stock == 0 ? 'disabled' : '' ?>>
-                Add to Cart
-              </button>
-            </form>
-
-          </div>
-        <?php endwhile; ?>
+      <div
+        class="flex items-center w-full sm:w-[30rem] bg-white border-2 border-[#56c8d8] rounded-full shadow px-4 h-12 focus-within:ring-2 focus-within:ring-[#c0392b] transition">
+        <input type="text" name="search" value="<?= htmlspecialchars($search) ?>" placeholder="Search products..."
+          class="flex-1 bg-transparent border-none outline-none appearance-none text-gray-700 placeholder:text-gray-400 text-sm h-full leading-[3rem]" />
+        <button type="submit"
+          class="ml-2 bg-[#c0392b] hover:bg-red-700 text-white text-sm font-semibold px-5 h-9 rounded-full transition">
+          Search
+        </button>
       </div>
-    <?php else: ?>
-      <p class="text-center text-gray-500 mt-10">No products match your criteria.</p>
-    <?php endif; ?>
+    </form>
 
+
+
+
+
+    <?php
+    $current_gift = $_GET['gift'] ?? '';
+    ?>
+
+    <div class="flex flex-wrap justify-center gap-2 my-8">
+      <a href="products.php"
+        class="px-4 py-2 rounded-full border <?= $current_gift == '' ? 'bg-emerald-600 text-white' : 'text-gray-700 border-gray-300 hover:bg-gray-100' ?>">
+        All Gifts
+      </a>
+      <?php foreach ($gift_categories as $cat): ?>
+        <a href="products.php?gift=<?= urlencode($cat) ?>"
+          class="px-4 py-2 rounded-full border <?= $current_gift == $cat ? 'bg-emerald-600 text-white' : 'text-gray-700 border-gray-300 hover:bg-gray-100' ?>">
+          <?= htmlspecialchars($cat) ?>
+        </a>
+      <?php endforeach; ?>
+    </div>
+
+
+    <?php
+    $selected_categories = $gift_filter !== '' ? [$gift_filter] : $gift_categories;
+    foreach ($selected_categories as $gift_category):
+      ?>
+      <section class="mb-12">
+        <h2 class="text-2xl font-bold text-gray-800 mb-4"><?= htmlspecialchars($gift_category) ?></h2>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          <?php
+          $query = "SELECT * FROM products WHERE gift_category = ?";
+          $local_conditions = $conditions;
+          $local_params = $params;
+          $local_types = $types;
+
+          if (!empty($local_conditions)) {
+            $query .= " AND (" . implode(" AND ", $local_conditions) . ")";
+          }
+          $query .= " $order LIMIT ? OFFSET ?";
+
+          $stmt = $conn->prepare($query);
+          $bind_types = 's' . $local_types . 'ii';
+          $bind_values = array_merge([$gift_category], $local_params, [$limit, $offset]);
+          $stmt->bind_param($bind_types, ...$bind_values);
+          $stmt->execute();
+          $products = $stmt->get_result();
+
+          if ($products->num_rows > 0):
+            while ($prod = $products->fetch_assoc()):
+              ?>
+              <div class="bg-white rounded-xl shadow p-4 h-52 flex justify-between items-center">
+                <!-- Text Section -->
+                <div class="flex-1 pr-4">
+                  <h3 class="text-base font-semibold text-gray-800 mb-1"><?= htmlspecialchars($prod['name'] ?? '') ?></h3>
+                  <p class="text-xs text-gray-500 mb-1">
+                    <?= !empty($prod['description']) ? htmlspecialchars($prod['description']) : 'No description available' ?>
+                  </p>
+                  <p class="text-sm text-gray-800 font-semibold mb-3">$<?= number_format($prod['price'], 2) ?></p>
+                  <form method="post" action="shopping_cart.php?action=add&id=<?= $prod['id']; ?>">
+                    <input type="hidden" name="hidden_name" value="<?= htmlspecialchars($prod['name']) ?>">
+                    <input type="hidden" name="hidden_price" value="<?= $prod['price'] ?>">
+                    <input type="hidden" name="hidden_img_id" value="<?= htmlspecialchars($prod['image']) ?>">
+                    <input type="hidden" name="item_quantity" value="1">
+                    <button type="submit" name="add_to_cart"
+                      class="px-3 py-1 border border-gray-800 text-xs text-gray-800 rounded-full hover:bg-gray-100 transition">
+                      Add to cart
+                    </button>
+                  </form>
+                </div>
+
+                <!-- Image Section -->
+                <div class="w-24 h-28 flex-shrink-0 bg-gray-100 rounded-lg overflow-hidden">
+                  <img src="uploads/<?= htmlspecialchars($prod['image'] ?? '') ?>"
+                    alt="<?= htmlspecialchars($prod['name'] ?? '') ?>" class="w-full h-full object-cover">
+                </div>
+              </div>
+            <?php endwhile; else: ?>
+            <p class="text-sm text-gray-500 col-span-full">No products in this category.</p>
+          <?php endif;
+          $stmt->close(); ?>
+        </div>
+      </section>
+    <?php endforeach; ?>
+    
     <!-- Pagination -->
     <div class="mt-10 flex justify-center gap-2">
-      <?php for ($p = 1; $p <= $total_pages; $p++): ?>
-        <a href="?<?= http_build_query(array_merge($_GET, ['page' => $p])) ?>"
-          class="px-4 py-2 rounded <?= $p == $page ? 'bg-emerald-600 text-white' : 'bg-gray-200 hover:bg-gray-300' ?>">
-          <?= $p ?>
-        </a>
-      <?php endfor; ?>
+      <?php if ($total_pages > 1): ?>
+        <?php for ($p = 1; $p <= $total_pages; $p++): ?>
+          <a href="?<?= http_build_query(array_merge($_GET, ['page' => $p])) ?>"
+            class="px-4 py-2 rounded <?= $p == $page ? 'bg-emerald-600 text-white' : 'bg-gray-200 hover:bg-gray-300' ?>"
+            <?= $p == $page ? 'aria-current="page"' : '' ?>>
+            <?= $p ?>
+          </a>
+        <?php endfor; ?>
+      <?php endif; ?>
     </div>
   </div>
 

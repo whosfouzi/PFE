@@ -25,13 +25,25 @@ if (isset($_POST['submit'])) {
         if (!password_verify($password, $row['password'])) {
             $passerror = "*Invalid password";
         } else {
-            // Set all relevant session variables
             $_SESSION['userid'] = $row['username'];
             $_SESSION['email'] = $row['email'];
             $_SESSION['id'] = $row['id'];
             $_SESSION['role'] = $row['role'];
 
-            // Redirect after login if user came from protected page
+            // Load cart items into session upon login
+            $stmt_cart = $db->prepare("
+                SELECT p.id as item_id, p.name as item_name, p.price as item_price, ci.quantity as item_quantity, p.category as item_category
+                FROM cart_items ci
+                JOIN cart c ON ci.cart_id = c.id
+                JOIN products p ON ci.product_id = p.id
+                WHERE c.user_id = ?
+            ");
+            $stmt_cart->bind_param("i", $_SESSION['id']);
+            $stmt_cart->execute();
+            $result_cart = $stmt_cart->get_result();
+            $_SESSION["shopping_cart"] = $result_cart->fetch_all(MYSQLI_ASSOC);
+            $stmt_cart->close();
+
             if (!empty($_SESSION['redirect_after_login'])) {
                 $redirect = $_SESSION['redirect_after_login'];
                 unset($_SESSION['redirect_after_login']);
@@ -58,12 +70,14 @@ if (isset($_POST['submit'])) {
 ?>
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <title>Login - GiftStore</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
+
 <body class="bg-gray-100">
   <?php include("navbar.php"); ?>
   <div class="container mx-auto px-4 py-10">
@@ -81,11 +95,13 @@ if (isset($_POST['submit'])) {
           <span class="text-red-500 text-sm"><?= $passerror ?></span>
         </div>
         <div class="text-center">
-          <button type="submit" name="submit" class="bg-pink-600 text-white px-6 py-2 rounded hover:bg-pink-700">Login</button>
+          <button type="submit" name="submit"
+            class="bg-pink-600 text-white px-6 py-2 rounded hover:bg-pink-700">Login</button>
         </div>
       </form>
     </div>
   </div>
   <?php include("footer.php"); ?>
 </body>
+
 </html>
