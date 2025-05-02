@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1:3306
--- Generation Time: May 02, 2025 at 09:29 PM
+-- Generation Time: Apr 29, 2025 at 10:34 PM
 -- Server version: 8.3.0
 -- PHP Version: 8.2.18
 
@@ -59,18 +59,14 @@ CREATE TABLE IF NOT EXISTS `cart_items` (
   PRIMARY KEY (`id`),
   KEY `cart_id` (`cart_id`),
   KEY `product_id` (`product_id`)
-) ENGINE=MyISAM AUTO_INCREMENT=22 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=MyISAM AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 --
 -- Dumping data for table `cart_items`
 --
 
 INSERT INTO `cart_items` (`id`, `cart_id`, `product_id`, `quantity`) VALUES
-(1, 1, 32, 1),
-(21, 2, 2, 1),
-(20, 2, 150, 4),
-(19, 2, 151, 1),
-(18, 2, 155, 1);
+(1, 1, 32, 1);
 
 -- --------------------------------------------------------
 
@@ -120,7 +116,7 @@ CREATE TABLE IF NOT EXISTS `orders` (
   `phone` varchar(20) DEFAULT NULL,
   `user_id` int DEFAULT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=MyISAM AUTO_INCREMENT=13 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=MyISAM AUTO_INCREMENT=11 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 --
 -- Dumping data for table `orders`
@@ -130,9 +126,7 @@ INSERT INTO `orders` (`id`, `user_name`, `email`, `address`, `total_price`, `pay
 (8, 'ff sli', 'fouzi@gmail.com', 'gggg', 100.00, 'pending', 'cancelled', '2025-04-18 22:48:24', '0793642323', NULL),
 (7, 'fou sli', 'fouzi@gmail.com', 'cite 11 decembre boumerdes', 8000.00, 'pending', 'cancelled', '2025-04-18 21:57:01', '0793642323', NULL),
 (9, 'ff sli', 'fouzi@gmail.com', 'cite 11 decembre boumerdes', 6000.00, 'pending', 'shipped', '2025-04-22 17:48:30', '0793642323', NULL),
-(10, 'Adel Derdiche', 'adelwwe50@gmail.com', '22248', 6000.00, 'pending', 'shipped', '2025-04-24 10:43:32', '0770235689', NULL),
-(11, 'Adel Derdiche', 'fouzi75@gmail.com', 'gggg', 3000.00, 'pending', 'cancelled', '2025-04-30 09:00:49', '0770235689', NULL),
-(12, 'Adel Derdiche', 'fouzi75@gmail.com', 'gggg', 20200.00, 'pending', 'processing', '2025-05-02 14:25:22', '0770235689', NULL);
+(10, 'Adel Derdiche', 'adelwwe50@gmail.com', '22248', 6000.00, 'pending', 'shipped', '2025-04-24 10:43:32', '0770235689', NULL);
 
 -- --------------------------------------------------------
 
@@ -151,7 +145,7 @@ CREATE TABLE IF NOT EXISTS `order_items` (
   PRIMARY KEY (`id`),
   KEY `order_id` (`order_id`),
   KEY `product_id` (`product_id`)
-) ENGINE=MyISAM AUTO_INCREMENT=15 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=MyISAM AUTO_INCREMENT=10 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 --
 -- Dumping data for table `order_items`
@@ -166,12 +160,7 @@ INSERT INTO `order_items` (`id`, `order_id`, `product_id`, `quantity`, `unit_pri
 (6, 7, 2, 1, 8000.00, 'watch2'),
 (7, 8, 32, 1, 100.00, 'Coin purse'),
 (8, 9, 150, 2, 3000.00, 'Casio'),
-(9, 10, 150, 2, 3000.00, 'Casio'),
-(10, 11, 150, 1, 3000.00, 'Casio'),
-(11, 12, 2, 1, 8000.00, 'watch2'),
-(12, 12, 150, 4, 3000.00, 'Casio'),
-(13, 12, 151, 1, 100.00, 'Casio Illuminator'),
-(14, 12, 155, 1, 100.00, 'Black Leather Bifold wallet');
+(9, 10, 150, 2, 3000.00, 'Casio');
 
 -- --------------------------------------------------------
 
@@ -190,7 +179,7 @@ CREATE TABLE IF NOT EXISTS `products` (
   `description` varchar(255) DEFAULT NULL,
   `gift_category` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=MyISAM AUTO_INCREMENT=156 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=MyISAM AUTO_INCREMENT=151 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 --
 -- Dumping data for table `products`
@@ -295,10 +284,7 @@ INSERT INTO `products` (`id`, `name`, `image`, `price`, `stock`, `category`, `de
 (130, 'Pokemon Toy', '67.jpg', 450.00, 0, 'Soft Toys', NULL, 'Gifts for Her'),
 (129, 'Rainbow cushion', '66.jpg', 349.00, 0, 'Soft Toys', NULL, 'Gifts for Her'),
 (128, 'Peach plush', '65.jpg', 200.00, 0, 'Soft Toys', NULL, 'Gifts for Her'),
-(127, 'Turtle', '64.jpg', 459.00, 0, 'Soft Toys', NULL, 'Gifts for Her'),
-(151, 'Casio Illuminator', 'pavlo-talpa-inhasepzxy4-unsplash.jpg', 100.00, 5, 'Watches', NULL, 'Gifts for Him'),
-(154, 'Silver-Colored earring', 'earrings.jpg', 599.00, 5, 'Jewellery', 'Pair of Silver-Colored earring with blue gemstone', 'Gifts for Her'),
-(155, 'Black Leather Bifold wallet', 'mason-supply--lN0HnySy7w-unsplash.jpg', 100.00, 5, 'Wallets', 'Black Leather Bifold wallet', 'Gifts for Him');
+(127, 'Turtle', '64.jpg', 459.00, 0, 'Soft Toys', NULL, 'Gifts for Her');
 
 -- --------------------------------------------------------
 
