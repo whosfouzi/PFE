@@ -8,6 +8,21 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $name = trim($_POST['name']);
     $category = trim($_POST['category']);
+    // Auto-map category to gift_category
+    $giftMap = [
+        'Watches'     => 'Gifts for Him',
+        'Wallets'     => 'Gifts for Him',
+        'Jewellery'   => 'Gifts for Her',
+        'Kids'        => 'Gifts for Kids',
+        'PhoneCase'   => 'Tech Gifts',
+        'Home Decor'  => 'Home & Decor',
+        'Crockery'    => 'Home & Decor',
+        'Soft Toys'   => 'Gifts for Her'
+    ];
+    $gift_category = $giftMap[$category] ?? 'General';
+
+    $description = trim($_POST['description']);
+
     $price = floatval($_POST['price']);
     $stock = intval($_POST['stock']);
     $image = null;
@@ -34,12 +49,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         die("Connection failed: " . $conn->connect_error);
     }
 
-    $stmt = $conn->prepare("INSERT INTO products (name, category, price, stock, image) VALUES (?, ?, ?, ?, ?)");
+    $stmt = $conn->prepare("INSERT INTO products (name, category, description, price, stock, image, gift_category) VALUES (?, ?, ?, ?, ?, ?, ?)");
     if ($stmt === false) {
         die("Prepare failed: " . $conn->error);
     }
 
-    $stmt->bind_param("ssdis", $name, $category, $price, $stock, $image);
+    $stmt->bind_param("sssdiss", $name, $category, $description, $price, $stock, $image, $gift_category);
     if ($stmt->execute()) {
         header("Location: admin.php?category=" . urlencode($category) . "&added=1");
         exit();

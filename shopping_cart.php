@@ -11,6 +11,19 @@ if (isset($_POST["add_to_cart"]) && isset($_SESSION["id"])) {
     $productId = $_GET["id"];
     $quantity = $_POST["item_quantity"];
 
+    // Fetch stock from DB
+    $stock_check = $db->prepare("SELECT stock FROM products WHERE id = ?");
+    $stock_check->bind_param("i", $productId);
+    $stock_check->execute();
+    $stock_check->bind_result($availableStock);
+    $stock_check->fetch();
+    $stock_check->close();
+
+    if ($quantity > $availableStock) {
+        $quantity = $availableStock; // Cap to max stock
+    }
+
+
     // Check if cart exists for user
     $stmt = $db->prepare("SELECT id FROM cart WHERE user_id = ?");
     $stmt->bind_param("i", $userId);
@@ -36,7 +49,7 @@ if (isset($_POST["add_to_cart"]) && isset($_SESSION["id"])) {
     if ($stmt->num_rows > 0) {
         $stmt->bind_result($itemId, $existingQuantity);
         $stmt->fetch();
-        $newQuantity = $existingQuantity + $quantity;
+        $newQuantity = $quantity;
         $stmt_update = $db->prepare("UPDATE cart_items SET quantity = ? WHERE id = ?");
         $stmt_update->bind_param("ii", $newQuantity, $itemId);
         $stmt_update->execute();

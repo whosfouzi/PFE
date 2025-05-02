@@ -8,7 +8,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   $order_id = intval($_POST['order_id']);
   $status = $_POST['order_status'];
 
-  $valid_statuses = ['processing', 'shipped', 'cancelled'];
+  $valid_statuses = ['processing', 'shipped'];
   if (!in_array($status, $valid_statuses)) {
     echo "invalid_status";
     exit();

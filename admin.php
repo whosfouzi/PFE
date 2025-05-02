@@ -494,6 +494,10 @@ $orders = $db->query($order_sql);
           <input type="text" name="category" class="border rounded w-full px-3 py-2" required>
         </div>
         <div class="mb-4">
+          <label class="block text-sm font-medium">Description:</label>
+          <input type="text" name="description" class="border rounded w-full px-3 py-2" required>
+        </div>
+        <div class="mb-4">
           <label class="block text-sm font-medium">Price:</label>
           <input type="text" name="price" class="border rounded w-full px-3 py-2" required>
         </div>

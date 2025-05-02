@@ -1,3 +1,15 @@
+<?php
+$conn = new mysqli("localhost", "root", "", "giftstore");
+$gift_categories = [];
+$cat_stmt = $conn->prepare("SELECT DISTINCT gift_category FROM products WHERE gift_category IS NOT NULL AND gift_category != ''");
+$cat_stmt->execute();
+$result = $cat_stmt->get_result();
+while ($row = $result->fetch_assoc()) {
+  $gift_categories[] = $row['gift_category'];
+}
+$cat_stmt->close();
+?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -21,7 +33,7 @@
     .brand-logo span {
       font-family: 'Dancing Script', cursive;
       font-size: 2.2rem;
-      font-weight: 400;
+      font-weight: 00;
     }
 
     .nav-item {
@@ -130,15 +142,11 @@ nav ul.dropdown-content li a:hover {
 </ul>
 
 <ul id="categories2" class="dropdown-content">
-  <li><a href="category1.php">Kids</a></li>
-  <li><a href="category2.php">PhoneCase</a></li>
-  <li><a href="category3.php">Home Decor</a></li>
-  <li><a href="category4.php">Watches</a></li>
-  <li><a href="category5.php">Jewellery</a></li>
-  <li><a href="category6.php">Soft Toys</a></li>
-  <li><a href="category7.php">Crockery</a></li>
-  <li><a href="category8.php">Wallet</a></li>
+  <?php foreach ($gift_categories as $cat): ?>
+    <li><a href="products.php?gift=<?= urlencode($cat) ?>"><?= htmlspecialchars($cat) ?></a></li>
+  <?php endforeach; ?>
 </ul>
+
 
 <!-- MATERIALIZE JS + INIT -->
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>

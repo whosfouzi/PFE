@@ -110,52 +110,50 @@ $cat_stmt->close();
   </style>
 </head>
 
-<body class="bg-gray-100">
+<body class="bg-gray-50 text-gray-800" class="bg-gray-50 text-gray-800">
   <?php include("navbar.php"); ?>
 
   <div class="mx-20 px-4 py-20">
     <h2 class="text-3xl font-bold text-center text-gray-800 mb-6">🛍️ Explore Products</h2>
-
+    <!-- Search Bar -->
     <form method="GET" class="flex items-center justify-center gap-4 mb-6">
       <div
         class="flex items-center w-full sm:w-[30rem] bg-white border-2 border-[#56c8d8] rounded-full shadow px-4 h-12 focus-within:ring-2 focus-within:ring-[#c0392b] transition">
         <input type="text" name="search" value="<?= htmlspecialchars($search) ?>" placeholder="Search products..."
           class="flex-1 bg-transparent border-none outline-none appearance-none text-gray-700 placeholder:text-gray-400 text-sm h-full leading-[3rem]" />
         <button type="submit"
-          class="ml-2 bg-[#c0392b] hover:bg-red-700 text-white text-sm font-semibold px-5 h-9 rounded-full transition">
+          class="ml-2 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold px-5 h-9 rounded-full transition">
           Search
         </button>
       </div>
     </form>
-
-
-
-
 
     <?php
     $current_gift = $_GET['gift'] ?? '';
     ?>
 
     <div class="flex flex-wrap justify-center gap-2 my-8">
-      <a href="products.php"
-        class="px-4 py-2 rounded-full border <?= $current_gift == '' ? 'bg-emerald-600 text-white' : 'text-gray-700 border-gray-300 hover:bg-gray-100' ?>">
+      <a href="products.php" class="px-4 py-2 rounded-full font-semibold transition <?= $current_gift == ''
+        ? 'bg-[#56c8d8] text-white shadow-sm'
+        : 'bg-white text-gray-600 hover:bg-gray-100' ?>">
         All Gifts
       </a>
       <?php foreach ($gift_categories as $cat): ?>
-        <a href="products.php?gift=<?= urlencode($cat) ?>"
-          class="px-4 py-2 rounded-full border <?= $current_gift == $cat ? 'bg-emerald-600 text-white' : 'text-gray-700 border-gray-300 hover:bg-gray-100' ?>">
+        <a href="products.php?gift=<?= urlencode($cat) ?>" class="px-4 py-2 rounded-full font-semibold transition <?= $current_gift == $cat
+            ? 'bg-[#56c8d8] text-white shadow-sm'
+            : 'bg-white text-gray-600 hover:bg-gray-100' ?>">
           <?= htmlspecialchars($cat) ?>
         </a>
       <?php endforeach; ?>
     </div>
-
 
     <?php
     $selected_categories = $gift_filter !== '' ? [$gift_filter] : $gift_categories;
     foreach ($selected_categories as $gift_category):
       ?>
       <section class="mb-12">
-        <h2 class="text-2xl font-bold text-gray-800 mb-4"><?= htmlspecialchars($gift_category) ?></h2>
+        <h2 class="text-2xl font-bold text-gray-800 mb-4 border-b-2 border-red-500 inline-block">
+          <?= htmlspecialchars($gift_category) ?></h2>
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           <?php
           $query = "SELECT * FROM products WHERE gift_category = ?";
@@ -178,28 +176,48 @@ $cat_stmt->close();
           if ($products->num_rows > 0):
             while ($prod = $products->fetch_assoc()):
               ?>
-              <div class="bg-white rounded-xl shadow p-4 h-52 flex justify-between items-center">
+              <div
+                class="bg-white rounded-xl shadow-md border border-gray-100 p-4 h-52 flex justify-between items-center hover:shadow-lg transition">
                 <!-- Text Section -->
                 <div class="flex-1 pr-4">
                   <h3 class="text-base font-semibold text-gray-800 mb-1"><?= htmlspecialchars($prod['name'] ?? '') ?></h3>
                   <p class="text-xs text-gray-500 mb-1">
                     <?= !empty($prod['description']) ? htmlspecialchars($prod['description']) : 'No description available' ?>
                   </p>
-                  <p class="text-sm text-gray-800 font-semibold mb-3">$<?= number_format($prod['price'], 2) ?></p>
-                  <form method="post" action="shopping_cart.php?action=add&id=<?= $prod['id']; ?>">
-                    <input type="hidden" name="hidden_name" value="<?= htmlspecialchars($prod['name']) ?>">
-                    <input type="hidden" name="hidden_price" value="<?= $prod['price'] ?>">
-                    <input type="hidden" name="hidden_img_id" value="<?= htmlspecialchars($prod['image']) ?>">
-                    <input type="hidden" name="item_quantity" value="1">
-                    <button type="submit" name="add_to_cart"
-                      class="px-3 py-1 border border-gray-800 text-xs text-gray-800 rounded-full hover:bg-gray-100 transition">
-                      Add to cart
-                    </button>
-                  </form>
+                  <p class="text-sm text-gray-800 font-semibold mb-1">DA <?= number_format($prod['price'], 2) ?></p>
+
+                  <?php
+                  $stock = $prod['stock'];
+                  if ($stock == 0) {
+                    $stock_label = 'Out of stock';
+                    $stock_color = 'bg-red-500';
+                  } elseif ($stock < 4) {
+                    $stock_label = 'Limited stock';
+                    $stock_color = 'bg-yellow-400';
+                  } else {
+                    $stock_label = 'In stock';
+                    $stock_color = 'bg-green-500';
+                  }
+                  ?>
+                  <span
+                    class="inline-block text-xs text-white <?= $stock_color ?> px-2 py-1 rounded mb-2"><?= $stock_label ?></span>
+
+                  <button onclick='openProductModal({
+                      id: <?= $prod["id"] ?>,
+                      name: "<?= htmlspecialchars($prod["name"]) ?>",
+                      category: "<?= htmlspecialchars($prod["category"]) ?>",
+                      price: <?= $prod["price"] ?>,
+                      stock: <?= $prod["stock"] ?>,
+                      image: "<?= htmlspecialchars($prod["image"]) ?>",
+                      description: "<?= htmlspecialchars($prod["description"] ?? 'No description available') ?>"
+                    })' class="bg-gray-100 hover:bg-gray-200 px-3 py-1 rounded text-sm">
+                    View Details
+                  </button>
+
                 </div>
 
                 <!-- Image Section -->
-                <div class="w-24 h-28 flex-shrink-0 bg-gray-100 rounded-lg overflow-hidden">
+                <div class="w-56 h-44 flex-shrink-0 bg-gray-100 rounded-lg overflow-hidden">
                   <img src="uploads/<?= htmlspecialchars($prod['image'] ?? '') ?>"
                     alt="<?= htmlspecialchars($prod['name'] ?? '') ?>" class="w-full h-full object-cover">
                 </div>
@@ -211,14 +229,14 @@ $cat_stmt->close();
         </div>
       </section>
     <?php endforeach; ?>
-    
+
     <!-- Pagination -->
     <div class="mt-10 flex justify-center gap-2">
       <?php if ($total_pages > 1): ?>
         <?php for ($p = 1; $p <= $total_pages; $p++): ?>
-          <a href="?<?= http_build_query(array_merge($_GET, ['page' => $p])) ?>"
-            class="px-4 py-2 rounded <?= $p == $page ? 'bg-emerald-600 text-white' : 'bg-gray-200 hover:bg-gray-300' ?>"
-            <?= $p == $page ? 'aria-current="page"' : '' ?>>
+          <a href="?<?= http_build_query(array_merge($_GET, ['page' => $p])) ?>" class="px-4 py-2 rounded-full font-semibold transition <?= $p == $page
+                 ? 'bg-[#56c8d8] text-white shadow-sm'
+                 : 'bg-white text-gray-600 hover:bg-gray-100' ?>" <?= $p == $page ? 'aria-current="page"' : '' ?>>
             <?= $p ?>
           </a>
         <?php endfor; ?>
@@ -227,113 +245,116 @@ $cat_stmt->close();
   </div>
 
   <?php include("footer.php"); ?>
-</body>
 
-</html>
-
-
-<!-- Modal backdrop and position fix -->
-<div id="productModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center"
+ <!-- Product Detail Modal -->
+<div id="productModal" class="fixed inset-0 bg-black bg-opacity-40 z-50 hidden items-center justify-center"
   onclick="closeProductModal(event)">
-  <!-- Modal box -->
-  <div
-    class="relative bg-white rounded-xl shadow-xl w-full max-w-4xl mx-auto p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-    <!-- Close button -->
+  <div class="bg-white w-full max-w-3xl mx-auto p-6 rounded-lg shadow-lg flex gap-6 relative"
+    onclick="event.stopPropagation()">
+
     <button onclick="closeProductModal()"
-      class="absolute top-4 right-4 text-gray-500 hover:text-red-500 text-xl font-bold">&times;</button>
+      class="absolute top-2 right-2 text-gray-500 hover:text-[#56c8d8] text-2xl transition">&times;</button>
 
-    <!-- Left: Image -->
-    <img id="modal-image" src="" alt="Product Image" class="w-full h-72 object-cover rounded-lg">
+    <!-- Left Side - Image fills entire side -->
+    <div class="w-1/2 flex">
+      <img id="modal-image" src="" alt="" class="w-full object-cover rounded h-full max-h-[500px]" />
+    </div>
 
-    <!-- Right: Content -->
-    <div class="flex flex-col justify-between">
-      <div>
-        <h2 id="modal-name" class="text-2xl font-bold text-gray-800 mb-2"></h2>
-        <p id="modal-category" class="text-sm text-gray-500 mb-1"></p>
-        <p id="modal-price" class="text-lg font-semibold text-emerald-600 mb-2"></p>
-        <div id="modal-stock" class="mb-4"></div>
-        <p id="modal-description" class="text-sm text-gray-700"></p>
-      </div>
-
-      <form method="post" action="shopping_cart.php?action=add&id=" id="modal-form">
-        <input type="hidden" name="hidden_name" id="modal-hidden-name">
-        <input type="hidden" name="hidden_price" id="modal-hidden-price">
-        <input type="hidden" name="hidden_img_id" id="modal-hidden-img">
-        <input type="hidden" name="hidden_category" id="modal-hidden-category">
-
+    <!-- Right Side - Content -->
+    <div class="w-1/2 flex flex-col">
+      <h2 id="modal-name" class="text-2xl font-bold text-gray-800 mb-1"></h2>
+      <p id="modal-category" class="text-sm text-gray-500 mb-2"></p>
+      <p id="modal-price" class="text-lg font-semibold text-[#56c8d8] mb-2"></p>
+      <p id="modal-description" class="text-sm text-gray-700 mb-3"></p>
+      <div id="modal-stock" class="mb-2"></div>
+      <form id="modal-form" method="post" action="" class="flex flex-col gap-2 mt-auto">
+        <input type="hidden" id="modal-hidden-name" name="hidden_name" />
+        <input type="hidden" id="modal-hidden-price" name="hidden_price" />
+        <input type="hidden" id="modal-hidden-img" name="hidden_img_id" />
+        <input type="hidden" id="modal-hidden-category" name="hidden_category" />
         <input type="number" name="item_quantity" id="modal-quantity" min="1" value="1"
-          class="w-24 px-3 py-2 border rounded-lg mb-2 shadow-sm" oninput="checkMaxQuantity(this, modalCurrentStock)">
-        <small class="text-red-500 text-xs hidden" id="warning-modal">You've reached the maximum quantity
-          available.</small>
-        <button type="submit" name="add_to_cart" id="modal-submit-btn"
-          class="w-full bg-emerald-600 text-white py-2 rounded hover:bg-emerald-700">
-          Add to Cart
-        </button>
+          class="w-24 px-3 py-2 border border-gray-300 rounded shadow-sm focus:outline-none"
+          oninput="checkMaxQuantity(this, modalCurrentStock)" />
+        <small class="text-red-500 text-xs hidden" id="warning-modal">
+          You’ve reached the maximum quantity available.
+        </small>
+        <button type="submit" id="modal-submit-btn" name="add_to_cart"
+          class="w-full bg-[#56c8d8] text-white py-2 rounded hover:bg-[#49b7c5] transition">Add to Cart</button>
       </form>
     </div>
   </div>
 </div>
 
 
-<script>
-  let modalCurrentStock = 0;
-  function openProductModal(data) {
-    modalCurrentStock = parseInt(data.stock);
-    document.getElementById('productModal').classList.remove('hidden');
+  <script>
+    let modalCurrentStock = 0;
+    function openProductModal(data) {
+      modalCurrentStock = parseInt(data.stock);
+      document.getElementById('productModal').classList.remove('hidden');
+      document.getElementById('productModal').classList.add('flex');
+      document.getElementById('modal-form').action = 'shopping_cart.php?action=add&id=' + data.id;
 
-    document.getElementById('modal-image').src = 'uploads/' + data.image;
-    document.getElementById('modal-name').textContent = data.name;
-    document.getElementById('modal-category').textContent = "Category: " + data.category;
-    document.getElementById('modal-price').textContent = "€" + parseFloat(data.price).toFixed(2);
-    document.getElementById('modal-description').textContent = data.description || "No description available.";
+      document.getElementById('modal-image').src = 'uploads/' + data.image;
+      document.getElementById('modal-name').textContent = data.name;
+      document.getElementById('modal-category').textContent = "Category: " + data.category;
+      document.getElementById('modal-price').textContent = "DA " + parseFloat(data.price).toFixed(2);
+      document.getElementById('modal-description').textContent = data.description || "No description available.";
 
-    // Set hidden form values
-    document.getElementById('modal-hidden-name').value = data.name;
-    document.getElementById('modal-hidden-price').value = data.price;
-    document.getElementById('modal-hidden-img').value = data.image;
-    document.getElementById('modal-hidden-category').value = data.category;
+      document.getElementById('modal-hidden-name').value = data.name;
+      document.getElementById('modal-hidden-price').value = data.price;
+      document.getElementById('modal-hidden-img').value = data.image;
+      document.getElementById('modal-hidden-category').value = data.category;
 
-    // Set quantity input max to stock and reset quantity
-    document.getElementById('modal-quantity').value = 1;
-    document.getElementById('modal-quantity').max = data.stock;
+      const qtyInput = document.getElementById('modal-quantity');
+      qtyInput.value = 1;
+      qtyInput.max = data.stock;
 
-    // Set form action dynamically with ID
-    document.getElementById('modal-form').action = 'shopping_cart.php?action=add&id=' + data.id;
+      const btn = document.getElementById('modal-submit-btn');
+      const stockBadge = document.getElementById('modal-stock');
+      const warning = document.getElementById('warning-modal');
 
-    // Handle stock status
-    const stock = parseInt(data.stock);
-    const btn = document.getElementById('modal-submit-btn');
-    const stockBadge = document.getElementById('modal-stock');
-    if (stock === 0) {
-      btn.disabled = true;
-      btn.classList.add('opacity-50', 'cursor-not-allowed');
-      stockBadge.innerHTML = '<span class="text-xs text-white bg-red-500 px-2 py-1 rounded">Out of Stock</span>';
-    } else {
-      btn.disabled = false;
-      btn.classList.remove('opacity-50', 'cursor-not-allowed');
-      const badgeColor = stock < 5 ? 'bg-yellow-400' : 'bg-green-500';
-      const badgeLabel = stock < 5 ? 'Low Stock' : 'In Stock';
-      stockBadge.innerHTML = `<span class="text-xs text-white ${badgeColor} px-2 py-1 rounded">${badgeLabel}</span>`;
+      if (data.stock === 0) {
+        btn.disabled = true;
+        qtyInput.disabled = true;
+        stockBadge.innerHTML = '<span class="text-xs text-white bg-red-500 px-2 py-1 rounded">Out of Stock</span>';
+        warning.classList.add('hidden');
+      } else {
+        btn.disabled = false;
+        qtyInput.disabled = false;
+        const badgeColor = data.stock < 5 ? 'bg-yellow-400' : 'bg-green-500';
+        const badgeLabel = data.stock < 5 ? 'Low Stock' : 'In Stock';
+        stockBadge.innerHTML = `<span class="text-xs text-white ${badgeColor} px-2 py-1 rounded">${badgeLabel}</span>`;
+      }
     }
-  }
 
-  function closeProductModal(e) {
-    // Only close if the background is clicked (not inner modal content)
-    if (!e || e.target.id === "productModal") {
-      document.getElementById('productModal').classList.add('hidden');
+    function closeProductModal(e) {
+      if (!e || e.target.id === "productModal") {
+        document.getElementById('productModal').classList.remove('flex');
+        document.getElementById('productModal').classList.add('hidden');
+      }
     }
-  }
 
-  function checkMaxQuantity(input, maxQty) {
-    const warningId = input.id.includes('modal') ? 'warning-modal' : `warning-main-${input.form.action.split('id=')[1]}`;
-    const warningEl = document.getElementById(warningId);
+    function checkMaxQuantity(input, maxQty) {
+      const warningId = input.id.includes('modal') ? 'warning-modal' : `warning-main-${input.form.action.split('id=')[1]}`;
+      const warningEl = document.getElementById(warningId);
 
-    if (parseInt(input.value) >= maxQty) {
-      if (warningEl) warningEl.classList.remove('hidden');
-      input.value = maxQty;
-    } else {
-      if (warningEl) warningEl.classList.add('hidden');
+      if (parseInt(input.value) >= maxQty) {
+        if (warningEl) {
+          warningEl.classList.remove('hidden');
+
+          // Hide it again after 2.5 seconds
+          setTimeout(() => {
+            warningEl.classList.add('hidden');
+          }, 2500);
+        }
+
+        input.value = maxQty; // Clamp value
+      } else {
+        if (warningEl) warningEl.classList.add('hidden');
+      }
     }
-  }
+  </script>
 
-</script>
+</body>
+
+</html>
