@@ -95,7 +95,7 @@ $orders = $stmt->get_result();
               <tr id="order-row-<?= $order["id"] ?>">
                 <td class="px-6 py-4">#<?= $order["id"] ?></td>
                 <td class="px-6 py-4"><?= $order["item_count"] ?></td>
-                <td class="px-6 py-4">€<?= number_format($order["total_price"], 2) ?></td>
+                <td class="px-6 py-4">DA<?= number_format($order["total_price"], 2) ?></td>
                 <td class="px-6 py-4" id="status-<?= $order["id"] ?>">
                   <?php
                   $color = match ($order["order_status"]) {

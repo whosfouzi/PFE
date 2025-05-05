@@ -157,6 +157,9 @@ if (isset($_GET['action']) && $_GET['action'] == 'delete' && isset($_GET['id']) 
               </td>
             </tr>
           <?php endforeach; ?>
+          <?php // Clear the shopping cart
+unset($_SESSION["shopping_cart"]);
+?>
           <tr style="font-weight: bold;">
             <td colspan="4" class="right-align">Total:</td>
             <td>€<?= number_format($total, 2) ?></td>

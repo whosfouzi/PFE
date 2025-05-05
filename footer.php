@@ -4,7 +4,7 @@
       <!-- About -->
       <div class="col s12 m4" style="margin-bottom: 30px;">
         <h5 style="color: #56c8d8; font-family: 'Dancing Script', cursive; font-size: 2rem; margin-bottom: 15px;">
-          Sefar<span style="color:rgb(255, 25, 0);">Gifts</span>
+          Sefar<span style="color: #FF1900;">Gifts</span>
         </h5>
         <p style="color: #333; font-weight: 400; font-size: 14px;">
           A curated gift destination for every occasion.<br>

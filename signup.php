@@ -1,7 +1,11 @@
-<?php 
+<?php
 session_start();
-$uerror = $emailerror = "";
+require __DIR__ . '/vendor/autoload.php';
 
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\Exception;
+
+$uerror = $emailerror = "";
 $flag = 0;
 
 if (isset($_POST['submit'])) {
@@ -18,42 +22,68 @@ if (isset($_POST['submit'])) {
         die("Connection failed: " . $db->connect_error);
     }
 
+    // Check username
     $stmt = $db->prepare("SELECT id FROM users WHERE username = ?");
     $stmt->bind_param("s", $username);
     $stmt->execute();
     $stmt->store_result();
 
     if ($stmt->num_rows > 0) {
-      $uerror = "*Username already taken";
-  } else {
-      // Now check email
-      $stmt = $db->prepare("SELECT id FROM users WHERE email = ?");
-      $stmt->bind_param("s", $email);
-      $stmt->execute();
-      $stmt->store_result();
-  
-      if ($stmt->num_rows > 0) {
-          $emailerror = "*Email already in use";
-      } else {
-          $hashed_password = password_hash($password, PASSWORD_DEFAULT);
-  
-          $stmt = $db->prepare("INSERT INTO users (fname, lname, phone, email, username, password, role) VALUES (?, ?, ?, ?, ?, ?, 'client')");
-          $stmt->bind_param("ssssss", $fname, $lname, $phone, $email, $username, $hashed_password);
-  
-          if ($stmt->execute()) {
-              $flag = 1;
-              $uerror = "";
-          } else {
-              $uerror = "*Something went wrong during registration.";
-          }
-      }
-  }
-  
+        $uerror = "*Username already taken";
+    } else {
+        // Check email
+        $stmt = $db->prepare("SELECT id FROM users WHERE email = ?");
+        $stmt->bind_param("s", $email);
+        $stmt->execute();
+        $stmt->store_result();
 
-    $stmt->close();
-    $db->close();
+        if ($stmt->num_rows > 0) {
+            $emailerror = "*Email already in use";
+        } else {
+            // Store data in session
+            $_SESSION['pending_signup'] = [
+                'fname' => $fname,
+                'lname' => $lname,
+                'phone' => $phone,
+                'email' => $email,
+                'username' => $username,
+                'password' => password_hash($password, PASSWORD_DEFAULT)
+            ];
+
+            // Generate OTP
+            $otp = rand(100000, 999999);
+            $_SESSION['signup_otp'] = $otp;
+            $_SESSION['signup_otp_expires'] = time() + 300;
+
+            // Send OTP via email using PHPMailer
+            $mail = new PHPMailer(true);
+            try {
+                $mail->isSMTP();
+                $mail->Host       = 'smtp.gmail.com';
+                $mail->SMTPAuth   = true;
+                $mail->Username   = 'fouzi.slimani75@gmail.com'; // your Gmail
+                $mail->Password   = 'eygcaowcedzvbyzk';   // app password
+                $mail->SMTPSecure = 'tls';
+                $mail->Port       = 587;
+
+                $mail->setFrom('fouzi.slimani75@gmail.com', 'SefarGifts');
+                $mail->addAddress($email);
+
+                $mail->isHTML(true);
+                $mail->Subject = 'Verify Your Email - SefarGifts';
+                $mail->Body    = '<p>Your verification code is: <strong>' . $otp . '</strong></p><p>This code will expire in 5 minutes.</p>';
+
+                $mail->send();
+                header("Location: verify_signup.php");
+                exit();
+            } catch (Exception $e) {
+                $uerror = "Failed to send verification email: {$mail->ErrorInfo}";
+            }
+        }
+    }
 }
 ?>
+
 
 <!-- Registration Form -->
 <!DOCTYPE html>

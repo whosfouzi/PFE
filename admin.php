@@ -127,7 +127,10 @@ $orders = $db->query($order_sql);
   <div class="flex h-screen">
     <!-- Sidebar -->
     <aside class="w-64 bg-white shadow-md border-r border-gray-200 p-5">
-      <h2 class="text-2xl font-bold text-pink-600 mb-8">GiftStore Admin</h2>
+      <h2 class="text-2xl font-bold text-pink-600 mb-8" style="font-family: 'Dancing Script', cursive;">
+        <span>SefarGifts</span> <span style="font-family: inherit;">Admin</span>
+      </h2>
+      
       <nav class="space-y-4">
         <button onclick="showSection('dashboard')"
           class="block w-full text-left text-gray-700 hover:text-pink-600 font-medium">Dashboard</button>

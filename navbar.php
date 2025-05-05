@@ -111,7 +111,7 @@ nav ul.dropdown-content li a:hover {
     <div class="nav-wrapper container">
       <a href="index.php" class="brand-logo" style="display: flex; align-items: center;">
         <span style="color: #56c8d8;">Sefar</span>
-        <span style="color: rgb(255, 25, 0);">Gifts</span>
+        <span style="color: #FF1900;">Gifts</span>
       </a>
 
       <ul class="left hide-on-med-and-down" style="margin-left: 250px;">
@@ -138,6 +138,7 @@ nav ul.dropdown-content li a:hover {
 <!-- DROPDOWN MENUS -->
 <ul id="dropdown2" class="dropdown-content">
   <li><a href="myorders.php">My Orders</a></li>
+  <li><a href="my_account.php">Account</a></li>
   <li><a href="logout.php">Logout</a></li>
 </ul>
 
