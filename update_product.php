@@ -18,8 +18,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         die("Database connection error: " . $db->connect_error);
     }
 
-    $stmt = $db->prepare("UPDATE products SET name=?, category=?, price=?, stock=? WHERE id=?");
-    $stmt->bind_param("ssdii", $name, $category, $price, $stock, $id);
+    $stmt = $db->prepare("UPDATE products SET name=?, description=?, category=?, price=?, stock=? WHERE id=?");
+    $stmt->bind_param("sssdii", $name, $description, $category, $price, $stock, $id);
     $stmt->execute();
     $stmt->close();
     $db->close();

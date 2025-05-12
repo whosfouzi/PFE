@@ -123,221 +123,331 @@ $orders = $db->query($order_sql);
   </style>
 </head>
 
-<body class="bg-pink-50">
+<body class="bg-grey-500">
   <div class="flex h-screen">
-    <!-- Sidebar -->
-    <aside class="w-64 bg-white shadow-md border-r border-gray-200 p-5">
-      <h2 class="text-2xl font-bold text-pink-600 mb-8" style="font-family: 'Dancing Script', cursive;">
-        <span>SefarGifts</span> <span style="font-family: inherit;">Admin</span>
-      </h2>
-      
-      <nav class="space-y-4">
+    <aside class="w-full lg:w-64 bg-white rounded-xl shadow-sm border border-gray-200 p-4 space-y-4">
+      <div class="px-3 py-4 border-b border-gray-100">
+        <h2 class="text-xl font-semibold text-[#56c8d8] flex items-center gap-2">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3 7h18M3 12h18M3 17h18" />
+          </svg>
+          Admin Panel
+        </h2>
+      </div>
+
+      <nav class="flex flex-col gap-2">
         <button onclick="showSection('dashboard')"
-          class="block w-full text-left text-gray-700 hover:text-pink-600 font-medium">Dashboard</button>
+          class="flex items-center space-x-3 px-3 py-2 text-gray-600 hover:bg-gray-50 rounded-lg transition">
+          <span>Dashboard</span>
+        </button>
+
         <button onclick="showSection('users')"
-          class="block w-full text-left text-gray-700 hover:text-pink-600 font-medium">Manage Users</button>
+          class="flex items-center space-x-3 px-3 py-2 text-gray-600 hover:bg-gray-50 rounded-lg transition">
+          <span>Manage Users</span>
+        </button>
+
         <button onclick="showSection('products')"
-          class="block w-full text-left text-gray-700 hover:text-pink-600 font-medium">Manage Products</button>
+          class="flex items-center space-x-3 px-3 py-2 text-gray-600 hover:bg-gray-50 rounded-lg transition">
+          <span>Manage Products</span>
+        </button>
+
         <button onclick="showSection('orders')"
-          class="block w-full text-left text-gray-700 hover:text-pink-600 font-medium">Manage Orders</button>
+          class="flex items-center space-x-3 px-3 py-2 text-gray-600 hover:bg-gray-50 rounded-lg transition">
+          <span>Manage Orders</span>
+        </button>
+
         <button onclick="showSection('payments')"
-          class="block w-full text-left text-gray-700 hover:text-pink-600 font-medium">Manage Payments</button>
+          class="flex items-center space-x-3 px-3 py-2 text-gray-600 hover:bg-gray-50 rounded-lg transition">
+          <span>Manage Payments</span>
+        </button>
+
         <button onclick="showSection('reviews')"
-          class="block w-full text-left text-gray-700 hover:text-pink-600 font-medium">Manage Reviews</button>
-        <a href="logout.php" class="block text-red-500 hover:text-red-700 font-medium">Logout</a>
+          class="flex items-center space-x-3 px-3 py-2 text-gray-600 hover:bg-gray-50 rounded-lg transition">
+          <span>Manage Reviews</span>
+        </button>
+
+        <a href="logout.php"
+          class="flex items-center space-x-3 px-3 py-2 text-red-500 hover:text-red-600 rounded-lg transition">
+          <span>Logout</span>
+        </a>
       </nav>
     </aside>
 
+
     <!-- Main content -->
     <main class="flex-1 p-10 overflow-y-auto">
-      <section id="dashboard" class="section active">
-        <h1 class="text-3xl font-bold text-pink-700 mb-4">Welcome, Admin 👋</h1>
-        <p class="text-gray-600 mb-10">Here’s what you can manage today.</p>
+      <section id="dashboard" class="section active mb-6">
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <h1 class="text-2xl lg:text-3xl font-bold text-gray-900 mb-2">
+            Welcome, Admin 👋
+          </h1>
+          <p class="text-gray-500 text-sm lg:text-base">
+            Here’s what you can manage today.
+          </p>
+        </div>
       </section>
 
+
       <!-- Users Section -->
-      <section id="users" class="section">
-        <h2 class="text-2xl font-semibold text-gray-800 mb-6">Manage Users</h2>
-        <div class="overflow-auto rounded-lg shadow">
-          <table class="min-w-full bg-white">
-            <thead class="bg-pink-100 text-pink-700">
-              <tr>
-                <th class="px-4 py-2 text-left text-sm font-semibold">#</th>
-                <th class="px-4 py-2 text-left text-sm font-semibold">Full Name</th>
-                <th class="px-4 py-2 text-left text-sm font-semibold">Username</th>
-                <th class="px-4 py-2 text-left text-sm font-semibold">Email</th>
-                <th class="px-4 py-2 text-left text-sm font-semibold">Role</th>
-                <th class="px-4 py-2 text-center text-sm font-semibold">Actions</th>
-              </tr>
-            </thead>
-            <tbody class="text-sm divide-y divide-gray-200">
-              <?php while ($row = $users->fetch_assoc()): ?>
+      <section id="users" class="section mb-6">
+        <?php if (isset($_GET['added'])): ?>
+          <div id="successMessage"
+            class="bg-green-50 border-l-4 border-green-400 p-4 mb-4 rounded-lg shadow-sm transition-opacity duration-500">
+            <div class="flex items-center">
+              <svg class="w-5 h-5 text-green-400 mr-3" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd"
+                  d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                  clip-rule="evenodd" />
+              </svg>
+              <span class="text-green-800 text-sm">Delivery person added successfully!</span>
+            </div>
+          </div>
+        <?php endif; ?>
+
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+          <h2 class="text-xl lg:text-2xl font-semibold text-gray-900 mb-4">Manage Users</h2>
+          <p class="text-gray-500 text-sm mb-4">View, promote, or remove users. You can also add new delivery persons
+            below.</p>
+
+          <!-- Add Delivery Person Modal -->
+          <div id="deliveryModal"
+            class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center">
+            <div class="bg-white rounded-xl w-full max-w-2xl p-6 shadow-lg relative">
+              <button onclick="closeDeliveryModal()"
+                class="absolute top-3 right-4 text-gray-400 hover:text-gray-600 text-xl">&times;</button>
+
+              <h2 class="text-xl font-semibold text-gray-800 mb-4">Add Delivery Person</h2>
+
+              <form action="add_delivery_person.php" method="POST" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">First Name</label>
+                  <input type="text" name="fname" required class="w-full border border-gray-300 rounded-lg px-3 py-2">
+                </div>
+
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Last Name</label>
+                  <input type="text" name="lname" required class="w-full border border-gray-300 rounded-lg px-3 py-2">
+                </div>
+
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Username</label>
+                  <input type="text" name="username" required
+                    class="w-full border border-gray-300 rounded-lg px-3 py-2">
+                </div>
+
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                  <input type="email" name="email" required class="w-full border border-gray-300 rounded-lg px-3 py-2">
+                </div>
+
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
+                  <input type="text" name="phone" required class="w-full border border-gray-300 rounded-lg px-3 py-2">
+                </div>
+
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                  <input type="password" name="password" required
+                    class="w-full border border-gray-300 rounded-lg px-3 py-2">
+                </div>
+
+                <input type="hidden" name="role" value="delivery person">
+
+                <div class="col-span-1 md:col-span-2 text-right mt-2">
+                  <button type="submit"
+                    class="bg-[#56c8d8] text-white px-5 py-2 rounded-lg hover:bg-[#3db9c7] transition">
+                    Add Delivery Person
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+          <button onclick="openDeliveryModal()"
+            class="bg-[#56c8d8] text-white px-4 py-2 rounded-lg hover:bg-[#3db9c7] transition mb-6">
+            + Add Delivery Person
+          </button>
+
+
+          <!-- Users Table -->
+          <div class="overflow-auto rounded-lg border border-gray-200">
+            <table class="min-w-full bg-white divide-y divide-gray-100 text-sm">
+              <thead class="bg-gray-50 text-gray-600 uppercase text-xs font-semibold tracking-wider">
                 <tr>
-                  <td class="px-4 py-3 text-gray-700"><?= $row['id'] ?></td>
-                  <td class="px-4 py-3 text-gray-700"><?= htmlspecialchars($row['fname'] . ' ' . $row['lname']) ?></td>
-                  <td class="px-4 py-3 text-gray-700"><?= htmlspecialchars($row['username']) ?></td>
-                  <td class="px-4 py-3 text-gray-700"><?= htmlspecialchars($row['email']) ?></td>
-                  <td class="px-4 py-3 text-gray-700"><?= ucfirst($row['role']) ?></td>
-                  <td class="px-4 py-3 text-center">
-                    <?php if ($row['role'] === 'client' || $row['role'] === 'delivery person'): ?>
-                      <a href="promote_user.php?id=<?= $row['id'] ?>"
-                        class="text-blue-500 hover:text-blue-700 font-medium">Promote</a>
-                      <a href="delete_user.php?id=<?= $row['id'] ?>"
-                        class="ml-4 text-red-500 hover:text-red-700 font-medium">Delete</a>
-                    <?php else: ?>
-                      <span class="text-gray-400">No actions</span>
-                    <?php endif; ?>
-                  </td>
+                  <th class="px-4 py-3 text-left">#</th>
+                  <th class="px-4 py-3 text-left">Full Name</th>
+                  <th class="px-4 py-3 text-left">Username</th>
+                  <th class="px-4 py-3 text-left">Email</th>
+                  <th class="px-4 py-3 text-left">Role</th>
+                  <th class="px-4 py-3 text-center">Actions</th>
                 </tr>
-              <?php endwhile; ?>
-            </tbody>
-          </table>
+              </thead>
+              <tbody class="divide-y divide-gray-100">
+                <?php while ($row = $users->fetch_assoc()): ?>
+                  <tr class="hover:bg-gray-50 transition">
+                    <td class="px-4 py-3 text-gray-800"><?= $row['id'] ?></td>
+                    <td class="px-4 py-3 text-gray-800"><?= htmlspecialchars($row['fname'] . ' ' . $row['lname']) ?></td>
+                    <td class="px-4 py-3 text-gray-800"><?= htmlspecialchars($row['username']) ?></td>
+                    <td class="px-4 py-3 text-gray-800"><?= htmlspecialchars($row['email']) ?></td>
+                    <td class="px-4 py-3 text-gray-800"><?= ucfirst($row['role']) ?></td>
+                    <td class="px-4 py-3 text-center">
+                      <?php if ($row['role'] === 'client' || $row['role'] === 'delivery person'): ?>
+                        <a href="promote_user.php?id=<?= $row['id'] ?>" class="text-[#56c8d8] hover:underline">Promote</a>
+                        <a href="delete_user.php?id=<?= $row['id'] ?>" class="ml-4 text-red-500 hover:underline">Delete</a>
+                      <?php else: ?>
+                        <span class="text-gray-400">No actions</span>
+                      <?php endif; ?>
+                    </td>
+                  </tr>
+                <?php endwhile; ?>
+              </tbody>
+            </table>
+          </div>
         </div>
       </section>
 
       <!-- Products Section -->
-      <section id="products" class="section">
-        <h2 class="text-2xl font-semibold text-gray-800 mb-6">Manage Products</h2>
-        <!-- Chart Container -->
-        <div class="mb-10 bg-white p-4 rounded shadow max-w-4xl mx-auto">
-          <h3 class="text-lg font-semibold text-gray-700 mb-4">Products by Category</h3>
-          <canvas id="categoryChart" height="100"></canvas>
-        </div>
-        <?php if (isset($_GET['updated'])): ?>
-          <div class="mb-4 px-4 py-2 bg-green-100 text-green-800 rounded">
-            ✅ Product updated successfully!
+      <section id="products" class="section mb-6">
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+          <h2 class="text-xl lg:text-2xl font-semibold text-gray-900 mb-4">Manage Products</h2>
+          <p class="text-gray-500 text-sm mb-6">Browse, edit, and manage product listings. Use filters or search to
+            refine.</p>
+
+          <?php if (isset($_GET['updated'])): ?>
+            <div
+              class="flex items-center gap-2 px-4 py-3 bg-green-50 border-l-4 border-green-400 rounded-lg mb-4 shadow-sm">
+              <svg class="w-5 h-5 text-green-400" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm-1-4h2v2h-2v-2zm0-8h2v6h-2V6z"
+                  clip-rule="evenodd" />
+              </svg>
+              <span class="text-green-800 text-sm">Product updated successfully!</span>
+            </div>
+          <?php elseif (isset($_GET['deleted'])): ?>
+            <div class="mb-4 px-4 py-2 bg-red-100 text-red-800 rounded">
+              🗑️ Product deleted successfully!
+            </div>
+          <?php endif; ?>
+
+          <!-- Chart Container -->
+          <div class="mb-10 bg-gray-50 p-4 rounded-lg border border-gray-200 max-w-4xl mx-auto">
+            <h3 class="text-lg font-semibold text-gray-700 mb-4">Products by Category</h3>
+            <canvas id="categoryChart" height="100"></canvas>
           </div>
-        <?php elseif (isset($_GET['deleted'])): ?>
-          <div class="mb-4 px-4 py-2 bg-red-100 text-red-800 rounded">
-            🗑️ Product deleted successfully!
+
+          <!-- Filter & Search -->
+          <div class="mb-6">
+            <div class="flex flex-wrap items-center gap-4">
+
+              <!-- Category Filter -->
+              <form method="GET" class="flex items-center gap-2">
+                <label for="category" class="text-gray-700 font-medium whitespace-nowrap">Filter by category:</label>
+                <select name="category" onchange="this.form.submit()" class="border rounded px-4 py-2">
+                  <option value="">All Categories</option>
+                  <?php while ($cat = $categories->fetch_assoc()): ?>
+                    <option value="<?= htmlspecialchars($cat['category']) ?>" <?= $cat['category'] === $category_filter ? 'selected' : '' ?>>
+                      <?= htmlspecialchars($cat['category']) ?>
+                    </option>
+                  <?php endwhile; ?>
+                </select>
+              </form>
+
+              <!-- Search Bar -->
+              <form method="GET" class="flex items-center gap-2">
+                <input type="text" name="search"
+                  value="<?= isset($_GET['search']) ? htmlspecialchars($_GET['search']) : '' ?>"
+                  placeholder="Search by name..." class="border px-4 py-2 rounded">
+                <button type="submit" class="bg-gray-800 text-white px-4 py-2 rounded hover:bg-gray-700">Search</button>
+              </form>
+
+            </div>
           </div>
-        <?php endif; ?>
-        <!-- Filter & Search Controls -->
-        <div class="mb-6">
-          <div class="flex flex-wrap items-center gap-4">
-
-            <!-- Category Filter -->
-            <form method="GET" class="flex items-center gap-2">
-              <label for="category" class="text-gray-700 font-medium whitespace-nowrap">Filter by category:</label>
-              <select name="category" onchange="this.form.submit()" class="border rounded px-4 py-2">
-                <option value="">All Categories</option>
-                <?php while ($cat = $categories->fetch_assoc()): ?>
-                  <option value="<?= htmlspecialchars($cat['category']) ?>" <?= $cat['category'] === $category_filter ? 'selected' : '' ?>>
-                    <?= htmlspecialchars($cat['category']) ?>
-                  </option>
-                <?php endwhile; ?>
-              </select>
-            </form>
-
-            <!-- Search Bar -->
-            <form method="GET" class="flex items-center gap-2">
-              <input type="text" name="search"
-                value="<?= isset($_GET['search']) ? htmlspecialchars($_GET['search']) : '' ?>"
-                placeholder="Search by name..." class="border px-4 py-2 rounded">
-              <button type="submit" class="bg-gray-800 text-white px-4 py-2 rounded">Search</button>
-            </form>
-
-          </div>
-        </div>
-
-        <!-- Chart.js -->
-        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-        <script>
-          document.addEventListener('DOMContentLoaded', function () {
-            const ctx = document.getElementById('categoryChart').getContext('2d');
-            const categoryChart = new Chart(ctx, {
-              type: 'bar',
-              data: {
-                labels: <?= json_encode(array_keys($category_counts)) ?>,
-                datasets: [{
-                  label: 'Products',
-                  data: <?= json_encode(array_values($category_counts)) ?>,
-                  backgroundColor: 'rgba(236, 72, 153, 0.6)',
-                  borderColor: 'rgba(236, 72, 153, 1)',
-                  borderWidth: 1
-                }]
-              },
-              options: {
-                scales: {
-                  y: { beginAtZero: true }
+          <!-- Chart.js -->
+          <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+          <script>
+            document.addEventListener('DOMContentLoaded', function () {
+              const ctx = document.getElementById('categoryChart').getContext('2d');
+              const categoryChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                  labels: <?= json_encode(array_keys($category_counts)) ?>,
+                  datasets: [{
+                    label: 'Products',
+                    data: <?= json_encode(array_values($category_counts)) ?>,
+                    backgroundColor: '#56c8d8',
+                    borderColor: '#56c8d8',
+                    borderWidth: 1
+                  }]
+                },
+                options: {
+                  scales: {
+                    y: { beginAtZero: true }
+                  }
                 }
-              }
+              });
             });
-          });
-        </script>
+          </script>
 
-        <div class="flex justify-end mb-4">
-          <button onclick="openAddModal()" class="bg-pink-600 text-white px-4 py-2 rounded hover:bg-pink-700">+ Add
-            Product</button>
-        </div>
+          <!-- Add Product Button -->
+          <div class="flex justify-end mb-4">
+            <button onclick="openAddModal()"
+              class="bg-[#56c8d8] text-white px-4 py-2 rounded-lg hover:bg-[#3db9c7] transition">
+              + Add Product
+            </button>
+          </div>
 
-        <div class="overflow-auto rounded-lg shadow">
-          <table class="min-w-full bg-white">
-            <thead class="bg-pink-100 text-pink-700">
-              <tr>
-                <th class="px-4 py-2 text-left text-sm font-semibold">#</th>
-                <th class="px-4 py-2 text-left text-sm font-semibold">Name</th>
-                <th class="px-4 py-2 text-left text-sm font-semibold">Category</th>
-
-                <th class="px-4 py-2 text-left text-sm font-semibold">
-                  <a href="?sort=price&order=<?= (isset($_GET['sort']) && $_GET['sort'] === 'price' && $_GET['order'] === 'asc') ? 'desc' : 'asc' ?>"
-                    class="hover:underline">
-                    Price
-                    <?= (isset($_GET['sort']) && $_GET['sort'] === 'price') ? ($_GET['order'] === 'asc' ? '▲' : '▼') : '' ?>
-                  </a>
-                </th>
-
-                <th class="px-4 py-2 text-left text-sm font-semibold">
-                  <a href="?sort=stock&order=<?= (isset($_GET['sort']) && $_GET['sort'] === 'stock' && $_GET['order'] === 'asc') ? 'desc' : 'asc' ?>"
-                    class="hover:underline">
-                    Stock
-                    <?= (isset($_GET['sort']) && $_GET['sort'] === 'stock') ? ($_GET['order'] === 'asc' ? '▲' : '▼') : '' ?>
-                  </a>
-                </th>
-
-                <th class="px-4 py-2 text-left text-sm font-semibold">Actions</th>
-              </tr>
-            </thead>
-
-            <tbody class="text-sm divide-y divide-gray-200">
-              <?php $i = 1;
-              $totalStock = 0;
-              while ($prod = $products->fetch_assoc()): ?>
+          <!-- Products Table -->
+          <div class="overflow-auto rounded-lg border border-gray-200">
+            <table class="min-w-full bg-white text-sm divide-y divide-gray-100">
+              <thead class="bg-gray-50 text-gray-600 uppercase text-xs font-semibold tracking-wider">
                 <tr>
-                  <td class="px-4 py-3 text-gray-700"><?= $i++ ?></td>
-                  <td class="px-4 py-3 text-gray-700"><?= htmlspecialchars($prod['name']) ?></td>
-                  <td class="px-4 py-3 text-gray-700"><?= htmlspecialchars($prod['category']) ?></td>
-                  <td class="px-4 py-3 text-gray-700">€<?= number_format($prod['price'], 2) ?></td>
-                  <td class="px-4 py-3 text-gray-700">
-                    <?php
-                    $stock = $prod['stock'];
-                    $badgeColor = $stock == 0 ? 'bg-red-500' : ($stock < 5 ? 'bg-yellow-400' : 'bg-green-500');
-                    $badgeLabel = $stock == 0 ? 'Out of Stock' : ($stock < 5 ? 'Low' : 'In Stock');
-                    $totalStock += $stock;
-                    ?>
-                    <span class="inline-block px-2 py-1 rounded-full text-white text-xs <?= $badgeColor ?>">
-                      <?= $stock ?> – <?= $badgeLabel ?>
-                    </span>
-                  </td>
-
-                  <td class="px-4 py-3 text-gray-700">
-                    <button onclick="openEditModal(<?= htmlspecialchars(json_encode($prod)) ?>)"
-                      class="text-blue-500 hover:underline text-sm">Edit</button>
-                    <button onclick="openDeleteModal(<?= $prod['id'] ?>, '<?= htmlspecialchars($prod['name']) ?>')"
-                      class="text-red-500 hover:underline text-sm ml-4">Delete</button>
-                  </td>
+                  <th class="px-4 py-3 text-left">#</th>
+                  <th class="px-4 py-3 text-left">Name</th>
+                  <th class="px-4 py-3 text-left">Category</th>
+                  <th class="px-4 py-3 text-left">Price</th>
+                  <th class="px-4 py-3 text-left">Stock</th>
+                  <th class="px-4 py-3 text-left">Actions</th>
                 </tr>
-              <?php endwhile; ?>
-              <tr class="bg-pink-50 font-semibold">
-                <td class="px-4 py-3 text-gray-700" colspan="1">Total:</td>
-                <td class="px-4 py-3 text-gray-700" colspan="3">
-                  <?= $i - 1 ?> product<?= ($i - 1) > 1 ? 's' : '' ?>
-                </td>
-                <td class="px-4 py-3 text-gray-700"><?= $totalStock ?></td>
-                <td></td>
-              </tr>
-            </tbody>
-          </table>
+              </thead>
+              <tbody class="divide-y divide-gray-100">
+                <?php $i = 1;
+                $totalStock = 0; ?>
+                <?php while ($prod = $products->fetch_assoc()): ?>
+                  <tr class="hover:bg-gray-50 transition">
+                    <td class="px-4 py-3 text-gray-800"><?= $i++ ?></td>
+                    <td class="px-4 py-3 text-gray-800"><?= htmlspecialchars($prod['name']) ?></td>
+                    <td class="px-4 py-3 text-gray-800"><?= htmlspecialchars($prod['category']) ?></td>
+                    <td class="px-4 py-3 text-gray-800">DA <?= number_format($prod['price'], 2) ?></td>
+                    <td class="px-4 py-3 text-gray-800">
+                      <?php
+                      $stock = $prod['stock'];
+                      $badgeColor = $stock == 0 ? 'bg-red-500' : ($stock < 5 ? 'bg-yellow-400' : 'bg-green-500');
+                      $badgeLabel = $stock == 0 ? 'Out of Stock' : ($stock < 5 ? 'Low' : 'In Stock');
+                      $totalStock += $stock;
+                      ?>
+                      <span class="inline-block px-2 py-1 rounded-full text-white text-xs <?= $badgeColor ?>">
+                        <?= $stock ?> – <?= $badgeLabel ?>
+                      </span>
+                    </td>
+                    <td class="px-4 py-3 text-gray-800">
+                      <button onclick="openEditModal(<?= htmlspecialchars(json_encode($prod)) ?>)"
+                        class="text-blue-500 hover:underline text-sm">Edit</button>
+                      <button onclick="openDeleteModal(<?= $prod['id'] ?>, '<?= htmlspecialchars($prod['name']) ?>')"
+                        class="text-red-500 hover:underline text-sm ml-4">Delete</button>
+                    </td>
+                  </tr>
+                <?php endwhile; ?>
+                <tr class="bg-gray-50 font-semibold">
+                  <td class="px-4 py-3 text-gray-700" colspan="1">Total:</td>
+                  <td class="px-4 py-3 text-gray-700" colspan="3">
+                    <?= $i - 1 ?> product<?= ($i - 1) > 1 ? 's' : '' ?>
+                  </td>
+                  <td class="px-4 py-3 text-gray-700"><?= $totalStock ?></td>
+                  <td></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Pagination -->
           <?php if ($total_pages > 1): ?>
             <div class="mt-6 flex justify-center gap-2 text-sm font-medium">
               <?php
@@ -354,7 +464,7 @@ $orders = $db->query($order_sql);
               <?php for ($p = 1; $p <= $total_pages; $p++): ?>
                 <?php $query['page'] = $p; ?>
                 <a href="<?= $baseUrl . '?' . http_build_query($query) ?>"
-                  class="px-3 py-1 rounded <?= $p == $page ? 'bg-pink-600 text-white' : 'bg-gray-100 hover:bg-gray-200' ?>">
+                  class="px-3 py-1 rounded <?= $p == $page ? 'bg-[#56c8d8] text-white' : 'bg-gray-100 hover:bg-gray-200' ?>">
                   <?= $p ?>
                 </a>
               <?php endfor; ?>
@@ -366,9 +476,9 @@ $orders = $db->query($order_sql);
               <?php endif; ?>
             </div>
           <?php endif; ?>
-
         </div>
       </section>
+
       <!-- Orders Section -->
       <section id="orders" class="section">
         <h2 class="text-2xl font-semibold text-gray-800 mb-6">Manage Orders</h2>
@@ -568,6 +678,7 @@ $orders = $db->query($order_sql);
     function openEditModal(product) {
       document.getElementById('edit-id').value = product.id;
       document.getElementById('edit-name').value = product.name;
+      document.getElementById('edit_description').value = product.description || ''; // new line
       document.getElementById('edit-return-category').value = new URLSearchParams(window.location.search).get('category') || '';
       document.getElementById('edit-category').value = product.category;
       document.getElementById('edit-price').value = product.price;
@@ -653,6 +764,21 @@ $orders = $db->query($order_sql);
     setTimeout(() => {
       document.querySelectorAll('.bg-green-100, .bg-red-100').forEach(el => el.remove());
     }, 4000);
+
+    function openDeliveryModal() {
+      document.getElementById('deliveryModal').classList.remove('hidden');
+    }
+
+    function closeDeliveryModal() {
+      document.getElementById('deliveryModal').classList.add('hidden');
+    }
+    setTimeout(() => {
+      const msg = document.getElementById('successMessage');
+      if (msg) {
+        msg.classList.add('opacity-0');
+        setTimeout(() => msg.remove(), 500);
+      }
+    }, 3500);
   </script>
 </body>
 
