@@ -1,7 +1,8 @@
 <?php
 session_start();
 
-if (!isset($_SESSION['userid'])) {
+if (!isset($_SESSION['id'])) {
+    // Store the current URL to redirect back after login
     $_SESSION['redirect_after_login'] = $_SERVER['REQUEST_URI'];
     header("Location: login.php");
     exit();
@@ -10,40 +11,74 @@ if (!isset($_SESSION['userid'])) {
 $db = new mysqli("localhost", "root", "", "giftstore");
 
 if ($db->connect_error) {
-    die("Connection failed: " . $db->connect_error);
+    // Log database connection error
+    error_log("Database Connection failed: " . $db->connect_error);
+    // In a production environment, you might want a more robust error page or message
+    die("Database connection failed. Please try again later.");
 }
 
 $user_id = $_SESSION['id'];
 
 // Fetch orders
+// Added order_status to the SELECT statement if it wasn't already there
 $order_stmt = $db->prepare("
-    SELECT 
-    o.id, 
-    o.created_at, 
-    o.order_status, 
-    o.total_price,
-    GROUP_CONCAT(oi.product_name SEPARATOR ', ') AS product_name
-FROM orders o
-JOIN order_items oi ON o.id = oi.order_id
-WHERE o.user_id = ?
-GROUP BY o.id
-ORDER BY o.created_at DESC
-
+    SELECT
+        o.id,
+        o.created_at,
+        o.order_status,
+        o.total_price,
+        GROUP_CONCAT(oi.product_name SEPARATOR ', ') AS product_name
+    FROM orders o
+    JOIN order_items oi ON o.id = oi.order_id
+    WHERE o.user_id = ?
+    GROUP BY o.id
+    ORDER BY o.created_at DESC
 ");
 
-$order_stmt->bind_param("i", $user_id);
-$order_stmt->execute();
-$orders = $order_stmt->get_result()->fetch_all(MYSQLI_ASSOC);
-$order_stmt->close();
+if (!$order_stmt) {
+    error_log("My Account Orders Prepare failed: " . $db->error);
+    $orders = []; // Initialize as empty array on error
+} else {
+    $order_stmt->bind_param("i", $user_id);
+    $order_stmt->execute();
+    $orders = $order_stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+    $order_stmt->close();
+}
+
+
+// Fetch wishlist items (now "Likes")
+$likes_stmt = $db->prepare("
+    SELECT p.id, p.name, p.price, p.image
+    FROM wishlist w /* Assuming 'wishlist' is still the table name */
+    JOIN products p ON w.product_id = p.id
+    WHERE w.user_id = ?
+");
+if (!$likes_stmt) {
+    error_log("My Account Likes Prepare failed: " . $db->error);
+    $likes = []; // Initialize as empty array on error
+} else {
+    $likes_stmt->bind_param("i", $user_id);
+    $likes_stmt->execute();
+    $likes = $likes_stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+    $likes_stmt->close();
+}
+
 
 // Fetch user info
-// Modify the SQL query to include new fields
 $stmt = $db->prepare("SELECT username, email, fname, lname, phone, created_at FROM users WHERE id = ?");
-$stmt->bind_param("i", $user_id);
-$stmt->execute();
-$result = $stmt->get_result();
-$user = $result->fetch_assoc();
-$stmt->close();
+if (!$stmt) {
+    error_log("My Account User Info Prepare failed: " . $db->error);
+    $user = []; // Initialize as empty array on error
+} else {
+    $stmt->bind_param("i", $user_id);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $user = $result->fetch_assoc();
+    $stmt->close();
+}
+
+
+$db->close(); // Close database connection
 ?>
 
 <!DOCTYPE html>
@@ -52,342 +87,720 @@ $stmt->close();
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>My Account</title>
+    <title>My Account - <?= htmlspecialchars($user['username'] ?? 'User') ?></title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body {
             font-family: 'Poppins', sans-serif;
+            background-color: #f3f4f6; /* Tailwind bg-gray-100 */
         }
 
-        /* Ensure custom grid works */
-        @media (min-width: 1024px) {
+        /* Responsive grid layout: sidebar fixed width on large screens, full width on smaller */
+        .account-grid {
+            display: grid;
+            grid-template-columns: 1fr; /* Single column for mobile */
+            gap: 1.5rem; /* 24px */
+        }
+
+        @media (min-width: 1024px) { /* lg breakpoint */
             .account-grid {
-                grid-template-columns: 256px 1fr;
+                grid-template-columns: 320px 1fr; /* Fixed width sidebar, flexible main content */
             }
+        }
+
+        .profile-initial-circle {
+            width: 80px; /* Same as screenshot "Aa" circle */
+            height: 80px;
+            border-radius: 50%;
+            background-color: #9ca3af; /* Tailwind gray-400 */
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem; /* 32px */
+            font-weight: 600; /* semibold */
+        }
+
+        /* Pill Navigation Styles */
+        .pill-nav-container {
+            background-color: #d1d5db; /* Tailwind gray-300 */
+            border-radius: 9999px; /* full */
+            padding: 0.25rem; /* p-1 */
+            display: flex;
+            justify-content: space-around; /* Distribute items evenly */
+            margin-bottom: 1.5rem; /* mb-6 */
+             /* Allow wrapping on smaller screens */
+            flex-wrap: wrap;
+            gap: 0.5rem; /* Add gap for wrapped items */
+        }
+
+        .pill-nav-link {
+            padding: 0.5rem 1.25rem; /* py-2 px-5, adjust for desired width */
+            border-radius: 9999px; /* full */
+            text-decoration: none;
+            color: #374151; /* Tailwind text-gray-700 */
+            font-weight: 500; /* medium */
+            transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+            text-align: center;
+            flex-grow: 1; /* Make items take available space if needed */
+            min-width: fit-content; /* Prevent shrinking too much */
+             cursor: pointer; /* Indicate it's clickable */
+        }
+
+        .pill-nav-link:hover {
+            color: #111827; /* Tailwind text-gray-900 */
+            background-color: #e5e7eb; /* Tailwind gray-200 */
+        }
+
+        .pill-nav-link.active {
+            background-color: #ffffff; /* white */
+            color: #56c8d8; /* Your primary turquoise color */
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); /* shadow-md */
+        }
+
+        /* Styling for content sections */
+        .content-section-card {
+            background-color: #ffffff; /* white */
+            border-radius: 0.75rem; /* rounded-xl */
+            padding: 1.5rem; /* p-6 */
+            margin-bottom: 1.5rem; /* mb-6 */
+             /* Initially hide all sections */
+            display: none;
+        }
+         /* Show the active section */
+        .content-section-card.active-section {
+             display: block;
+        }
+
+        .content-section-card h2 {
+             margin-bottom: 0.5rem; /* Add some space below h2 if it's directly followed by content */
+        }
+
+        /* Ensure buttons in modals and other areas have consistent styling */
+        .btn-primary {
+            background-color: #56c8d8; /* Your primary color */
+            color: white;
+            padding: 0.5rem 1rem; /* py-2 px-4 */
+            border-radius: 0.5rem; /* rounded-lg */
+            transition: background-color 0.2s ease;
+            font-weight: 500;
+        }
+        .btn-primary:hover {
+            background-color: #45b1c0; /* Darker shade of primary */
+        }
+
+        /* Table styling adjustments */
+        .orders-table th {
+            background-color: #f9fafb; /* bg-gray-50 */
+        }
+        .orders-table td, .orders-table th {
+            /* border-bottom: 1px solid #e5e7eb; Tailwind divide-gray-200 */
+        }
+        .orders-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        /* Wishlist/Likes item card */
+        .like-item-card {
+            background-color: #ffffff;
+            border-radius: 0.5rem; /* rounded-lg */
+            border: 1px solid #e5e7eb; /* border-gray-200 */
+            transition: box-shadow 0.3s ease;
+        }
+        .like-item-card:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1); /* shadow-lg */
+        }
+        /* Modal backdrop and animation */
+        .modal-backdrop {
+            position: fixed;
+            inset: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 100; /* Ensure it's above page content but below modal */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.3s ease-in-out;
+        }
+        .modal-backdrop.visible {
+            opacity: 1;
+        }
+         .modal-content {
+            background-color: #fff;
+            padding: 1.5rem;
+            border-radius: 0.75rem;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            max-width: 500px;
+            width: 100%;
+            position: relative;
+            transform: scale(0.95);
+            transition: transform 0.3s ease-in-out;
+        }
+        .modal-backdrop.visible .modal-content {
+            transform: scale(1);
         }
     </style>
 </head>
 
-<body class="bg-gray-50">
-    <?php include("navbar.php"); ?>
+<body class="bg-gray-100">
+    <?php include("navbar.php"); // Ensure navbar.php styling is compatible or updated ?>
 
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <div class="grid gap-6 account-grid">
-            <!-- Mobile-Optimized Sidebar -->
-            <nav class="lg:order-first">
-                <div class="bg-white rounded-xl shadow-sm p-4 mb-4 border border-gray-200">
-                    <div class="lg:block">
-                        <h2 class="text-lg font-semibold text-gray-800">Welcome back,</h2>
-                        <p class="text-[#56c8d8] font-medium truncate"><?= htmlspecialchars($_SESSION['username']) ?>
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <?php
+        // Display messages for profile updates or like removals
+        // These messages should ideally be handled via session and displayed once
+        $message_type = $_GET['message'] ?? null;
+        $error_type = $_GET['error'] ?? null;
+
+        if ($message_type === 'removed'): ?>
+            <div id="removeSuccessMessage" class="bg-green-50 border-l-4 border-green-400 p-4 mb-6 rounded-md shadow-sm">
+                <div class="flex">
+                    <div class="flex-shrink-0">
+                        <svg class="h-5 w-5 text-green-400" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                        </svg>
+                    </div>
+                    <div class="ml-3">
+                        <p class="text-sm font-medium text-green-700">Product removed from Likes successfully!</p>
+                    </div>
+                </div>
+            </div>
+        <?php elseif ($error_type): ?>
+            <div id="removeErrorMessage" class="bg-red-50 border-l-4 border-red-400 p-4 mb-6 rounded-md shadow-sm">
+                <div class="flex">
+                    <div class="flex-shrink-0">
+                         <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+                        </svg>
+                    </div>
+                    <div class="ml-3">
+                        <p class="text-sm font-medium text-red-700">
+                            <?php
+                            if ($error_type === 'invalid_product_id') echo 'Error: Invalid product ID.';
+                            elseif ($error_type === 'db_connect_failed') echo 'Error: Could not connect to database.';
+                            elseif ($error_type === 'prepare_failed') echo 'Error: Database query failed.';
+                            elseif ($error_type === 'delete_failed') echo 'Error: Failed to remove product from Likes.';
+                             elseif ($error_type === 'username_taken') echo 'Username already taken. Please choose another.';
+                            elseif ($error_type === 'email_taken') echo 'Email already taken. Please choose another.';
+                            elseif ($error_type === 'update_failed') echo 'An error occurred while updating your account.';
+                            else echo 'An unknown error occurred.';
+                            ?>
                         </p>
                     </div>
                 </div>
-
-                <div class="bg-white rounded-xl shadow-sm p-2 space-y-1 border border-gray-200">
-                    <a href="#profile"
-                        class="flex items-center space-x-3 px-3 py-3 text-gray-600 hover:bg-gray-50 rounded-lg">
-                        <svg class="w-5 h-5 text-[#56c8d8]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round"
-                                d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                        </svg>
-                        <span>Profile</span>
-                    </a>
-                    <a href="#orders"
-                        class="flex items-center space-x-3 px-3 py-3 text-gray-600 hover:bg-gray-50 rounded-lg">
-                        <svg class="w-5 h-5 text-[#56c8d8]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round"
-                                d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
-                        </svg>
-                        <span>Orders</span>
-                    </a>
-                    <a href="javascript:void(0)" onclick="openUpdateModal()"
-                        class="flex items-center space-x-3 px-3 py-3 text-gray-600 hover:bg-gray-50 rounded-lg">
-                        <svg class="w-5 h-5 text-[#56c8d8]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round"
-                                d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                        </svg>
-                        <span>Edit Profile</span>
-                    </a>
-                    <a onclick="openChangePasswordModal()"
-                        class="flex items-center space-x-3 px-3 py-3 text-gray-600 hover:bg-gray-50 rounded-lg">
-                        <svg class="w-5 h-5 text-[#56c8d8]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round"
-                                d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
-                        </svg>
-                        <span>Security</span>
-                    </a>
-                </div>
-            </nav>
-
-            <!-- Main Content -->
-            <main class="min-w-0 lg:order-last">
-                <header class="mb-6">
-                    <h1 class="text-2xl lg:text-3xl font-bold text-gray-900">
-                        Account Overview
-                    </h1>
-                    <p class="text-gray-500 mt-2 text-sm lg:text-base">Manage your profile and orders</p>
-                </header>
-
-                <!-- Profile Section -->
-                <section id="profile" class="mb-6">
-                    <?php if (isset($_GET['updated'])): ?>
-                        <div class="bg-green-50 border-l-4 border-green-400 p-3 mb-4 rounded-lg">
-                            <div class="flex items-center">
-                                <svg class="w-5 h-5 text-green-400 mr-3" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fill-rule="evenodd"
-                                        d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                                        clip-rule="evenodd" />
-                                </svg>
-                                <span class="text-green-700 text-sm lg:text-base">Account updated successfully!</span>
-                            </div>
+            </div>
+        <?php endif; ?>
+        <div class="account-grid">
+            <aside class="lg:sticky lg:top-8 self-start">
+                <div class="bg-gray-200 rounded-2xl p-6 h-full shadow-sm">
+                    <div class="flex flex-col items-center mb-8">
+                        <div class="profile-initial-circle mb-4">
+                            <?php
+                            $firstLetter = !empty($user['username']) ? strtoupper(substr($user['username'], 0, 1)) : 'U';
+                            $secondLetter = strlen($user['username']) > 1 ? strtoupper(substr($user['username'], 1, 1)) : '';
+                            // Display one or two letters like "Aa" if available
+                            echo htmlspecialchars($firstLetter . ($secondLetter ?: ''));
+                            ?>
                         </div>
-                    <?php elseif (isset($_GET['error']) && $_GET['error'] === 'username_taken'): ?>
-                        <div class="bg-red-50 border-l-4 border-red-400 p-3 mb-4 rounded-lg">
-                            <div class="flex items-center">
-                                <svg class="w-5 h-5 text-red-400 mr-3" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fill-rule="evenodd"
-                                        d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-                                        clip-rule="evenodd" />
-                                </svg>
-                                <span class="text-red-700 text-sm lg:text-base">Username already taken. Please choose
-                                    another.</span>
-                            </div>
-                        </div>
-                    <?php endif; ?>
-
-                    <div class="bg-white rounded-xl shadow-sm p-4 lg:p-6 border border-gray-200">
-                        <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-4">
-                            <div class="mb-3 lg:mb-0">
-                                <h2 class="text-lg lg:text-xl font-semibold text-gray-900">Profile Information</h2>
-                                <p class="text-gray-500 mt-1 text-sm lg:text-base">Basic details and account info</p>
-                            </div>
-                            <button onclick="openUpdateModal()"
-                                class="btn-primary text-white px-4 py-2 rounded-lg w-full lg:w-auto text-sm lg:text-base">
-                                Edit Profile
-                            </button>
-                        </div>
-
-                        <dl class="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                            <div class="sm:col-span-1">
-                                <dt class="text-sm font-medium text-gray-500">Username</dt>
-                                <dd class="mt-1 text-gray-900 break-words">
-                                    <?= htmlspecialchars($_SESSION['username']) ?>
-                                </dd>
-                            </div>
-                            <div class="sm:col-span-1">
-                                <dt class="text-sm font-medium text-gray-500">First Name</dt>
-                                <dd class="mt-1 text-gray-900"><?= htmlspecialchars($user['fname'] ?? '—') ?></dd>
-                            </div>
-                            <div class="sm:col-span-1">
-                                <dt class="text-sm font-medium text-gray-500">Last Name</dt>
-                                <dd class="mt-1 text-gray-900"><?= htmlspecialchars($user['lname'] ?? '—') ?></dd>
-                            </div>
-                            <div class="sm:col-span-1">
-                                <dt class="text-sm font-medium text-gray-500">Phone Number</dt>
-                                <dd class="mt-1 text-gray-900"><?= htmlspecialchars($user['phone'] ?? '—') ?>
-                                </dd>
-                            </div>
-                            <div class="sm:col-span-1">
-                                <dt class="text-sm font-medium text-gray-500">Email address</dt>
-                                <dd class="mt-1 text-gray-900 break-words"><?= htmlspecialchars($user['email']) ?></dd>
-                            </div>
-                            <div class="sm:col-span-1">
-                                <dt class="text-sm font-medium text-gray-500">Member since</dt>
-                                <dd class="mt-1 text-gray-900"><?= date('F j, Y', strtotime($user['created_at'])) ?>
-                                </dd>
-                            </div>
-                        </dl>
+                        <h2 class="text-2xl font-semibold text-gray-800">
+                            <?= htmlspecialchars($user['username'] ?? 'Guest User') ?>
+                        </h2>
                     </div>
-                </section>
-
-                <!-- Orders Section -->
-                <section id="orders" class="mb-6">
-                    <div class="bg-white rounded-xl shadow-sm border border-gray-200">
-                        <div class="px-4 py-4 lg:px-6 lg:py-5 border-b border-gray-200">
-                            <h2 class="text-lg lg:text-xl font-semibold text-gray-900">Order History</h2>
-                            <p class="text-gray-500 mt-1 text-sm lg:text-base">Recent purchases and status</p>
+                    <dl class="space-y-4 text-sm">
+                        <div>
+                            <dt class="text-gray-500 font-medium mb-1">Username</dt>
+                            <dd class="text-gray-800 text-base break-words"><?= htmlspecialchars($user['username'] ?? 'N/A') ?></dd>
                         </div>
+                        <div>
+                            <dt class="text-gray-500 font-medium mb-1">First Name</dt>
+                            <dd class="text-gray-800 text-base"><?= htmlspecialchars($user['fname'] ?? 'N/A') ?></dd>
+                        </div>
+                        <div>
+                            <dt class="text-sm font-medium text-gray-500 mb-1">Last Name</dt>
+                            <dd class="text-gray-800 text-base"><?= htmlspecialchars($user['lname'] ?? 'N/A') ?></dd>
+                        </div>
+                        <div>
+                            <dt class="text-sm font-medium text-gray-500 mb-1">Phone Number</dt>
+                            <dd class="text-gray-800 text-base"><?= htmlspecialchars($user['phone'] ?? 'N/A') ?></dd>
+                        </div>
+                        <div>
+                            <dt class="text-sm font-medium text-gray-500 mb-1">Email Address</dt>
+                            <dd class="text-gray-800 text-base break-words"><?= htmlspecialchars($user['email'] ?? 'N/A') ?></dd>
+                        </div>
+                        <div>
+                            <dt class="text-sm font-medium text-gray-500 mb-1">Member Since</dt>
+                            <dd class="text-gray-800 text-base">
+                                <?= isset($user['created_at']) ? date('F j, Y', strtotime($user['created_at'])) : 'N/A' ?>
+                            </dd>
+                        </div>
+                    </dl>
+                </div>
+            </aside>
 
-                        <div class="overflow-x-auto">
-                            <table class="min-w-full divide-y divide-gray-200">
-                                <thead class="bg-gray-50">
-                                    <tr>
-                                        <th
-                                            class="px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            Product</th>
-                                        <th
-                                            class="px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            Date</th>
-                                        <th
-                                            class="px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            Status</th>
-                                        <th
-                                            class="px-4 lg:px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            Total</th>
-                                    </tr>
-                                </thead>
-                                <tbody class="bg-white divide-y divide-gray-200">
+            <main class="min-w-0">
+                <nav id="pill-navigation" class="pill-nav-container mb-8">
+                    <button class="pill-nav-link" data-section="orders">Orders</button>
+                    <button class="pill-nav-link" data-section="likes">Likes</button>
+                    <button class="pill-nav-link" data-section="edit-profile">Edit Profile</button>
+                    <button class="pill-nav-link" data-section="security">Security</button>
+                </nav>
+
+                <section id="orders" class="content-section-card">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-xl lg:text-2xl font-semibold text-gray-900">Order History</h2>
+                    </div>
+                    <p class="text-gray-600 mt-1 mb-6 text-sm lg:text-base">
+                        Review your recent purchases and their current status.
+                    </p>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200 orders-table">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Product(s)</th>
+                                    <th class="px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                                    <th class="px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                    <th class="px-4 lg:px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
+                                    <th class="px-4 lg:px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-gray-200">
+                                <?php if (!empty($orders)): ?>
                                     <?php foreach ($orders as $order): ?>
                                         <tr class="hover:bg-gray-50 transition-colors">
-                                            <td
-                                                class="px-4 lg:px-6 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
-                                                
-                                                <div>
-                                                    <?= htmlspecialchars($order['product_name']) ?>
-                                                </div>
+                                            <td class="px-4 lg:px-6 py-4 whitespace-normal text-sm font-medium text-gray-900 max-w-xs break-words">
+                                                <?= htmlspecialchars($order['product_name']) ?>
                                             </td>
-
-                                            <td class="px-4 lg:px-6 py-3 whitespace-nowrap text-sm text-gray-500">
+                                            <td class="px-4 lg:px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                                 <?= date('M d, Y', strtotime($order['created_at'])) ?>
                                             </td>
-                                            <td class="px-4 lg:px-6 py-3 whitespace-nowrap">
+                                            <td class="px-4 lg:px-6 py-4 whitespace-nowrap">
                                                 <?php
-                                                $statusColor = [
-                                                    'cancelled' => 'red',
-                                                    'shipped' => 'green',
-                                                    'delivered' => 'green',
-                                                    'pending' => 'yellow'
-                                                ][$order['order_status']] ?? 'gray';
+                                                $statusColorMapping = [
+                                                    'cancelled' => 'red', 'failed' => 'red',
+                                                    'shipped' => 'blue', 'delivered' => 'green',
+                                                    'pending' => 'yellow', 'processing' => 'indigo',
+                                                    'completed' => 'green' // Added completed status
+                                                ];
+                                                $statusColor = $statusColorMapping[strtolower($order['order_status'])] ?? 'gray';
                                                 ?>
-                                                <span
-                                                    class="px-2.5 py-1 rounded-full text-xs font-medium bg-<?= $statusColor ?>-100 text-<?= $statusColor ?>-800">
-                                                    <?= ucfirst($order['order_status']) ?>
+                                                <span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-<?= $statusColor ?>-100 text-<?= $statusColor ?>-800">
+                                                    <?= ucfirst(htmlspecialchars($order['order_status'])) ?>
                                                 </span>
                                             </td>
-                                            <td
-                                                class="px-4 lg:px-6 py-3 whitespace-nowrap text-right text-sm font-medium text-gray-900">
+                                            <td class="px-4 lg:px-6 py-4 whitespace-nowrap text-right text-sm font-medium text-gray-900">
                                                 <?= number_format($order['total_price'], 2) ?> DA
+                                            </td>
+                                            <td class="px-4 lg:px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                                <?php if (strtolower($order['order_status']) === 'processing' || strtolower($order['order_status']) === 'pending'): ?>
+                                                    <form action="cancel_order.php" method="POST" class="inline">
+                                                        <input type="hidden" name="order_id" value="<?= $order['id'] ?>">
+                                                        <button type="submit"
+                                                            class="text-red-600 hover:text-red-800 text-sm font-medium"
+                                                            onclick="return confirm('Are you sure you want to cancel this order?')">
+                                                            Cancel
+                                                        </button>
+                                                    </form>
+                                                <?php elseif (strtolower($order['order_status']) === 'completed'): ?>
+                                                    <a href="review.php?order_id=<?= $order['id'] ?>"
+                                                       class="text-turquoise-primary hover:text-cyan-700 text-sm font-medium">
+                                                        Leave Review
+                                                    </a>
+                                                <?php else: ?>
+                                                    <span class="text-gray-400 text-sm italic">No actions</span>
+                                                <?php endif; ?>
                                             </td>
                                         </tr>
                                     <?php endforeach; ?>
-                                </tbody>
-                            </table>
+                                <?php else: ?>
+                                    <tr>
+                                        <td colspan="5" class="text-center py-10 text-gray-500">
+                                            You have no orders yet.
+                                            <a href="products.php" class="text-indigo-600 hover:text-indigo-800 font-medium">Start shopping!</a>
+                                        </td>
+                                    </tr>
+                                <?php endif; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <section id="likes" class="content-section-card">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-xl lg:text-2xl font-semibold text-gray-900">Your Likes</h2>
+                    </div>
+                     <p class="text-gray-600 mt-1 mb-6 text-sm lg:text-base">
+                        Items you've saved for later.
+                    </p>
+                    <?php if (!empty($likes)): ?>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            <?php foreach ($likes as $item): ?>
+                                <div class="like-item-card overflow-hidden">
+                                    <a href="product.php?id=<?= $item['id'] ?>" class="block">
+                                        <?php
+                                        $imagePath = $item['image'] ?? 'no-image.jpg';
+                                        $finalImageSrc = 'uploads/' . htmlspecialchars($imagePath);
+
+                                        // Fallback for missing image or if uploads/ is not correct
+                                        if (!file_exists('uploads/' . $imagePath) || is_dir('uploads/' . $imagePath)) {
+                                             $finalImageSrc = 'https://placehold.co/600x400/cccccc/969696?text=No+Image';
+                                        }
+                                        ?>
+                                        <img src="<?= $finalImageSrc ?>"
+                                             alt="<?= htmlspecialchars($item['name']) ?>"
+                                             class="w-full h-56 object-cover transition-transform duration-300 hover:scale-105"
+                                             onerror="this.onerror=null;this.src='https://placehold.co/600x400/cccccc/969696?text=No+Image';">
+                                    </a>
+                                    <div class="p-4">
+                                        <h3 class="font-semibold text-lg text-gray-800 truncate" title="<?= htmlspecialchars($item['name']) ?>">
+                                            <a href="product.php?id=<?= $item['id'] ?>" class="hover:text-[#56c8d8]">
+                                                <?= htmlspecialchars($item['name']) ?>
+                                            </a>
+                                        </h3>
+                                        <div class="mt-3 flex justify-between items-center">
+                                            <span class="text-[#56c8d8] font-bold text-xl">DA <?= number_format($item['price'], 2) ?></span>
+                                            <div class="flex gap-2">
+                                                <a href="remove_from_wishlist.php?id=<?= $item['id'] ?>&return_url=<?= urlencode($_SERVER['REQUEST_URI']) ?>#likes"
+                                                   class="px-3 py-1.5 bg-red-500 text-white rounded-md hover:bg-red-600 text-xs font-medium transition-colors"
+                                                   title="Remove from Likes">
+                                                    Remove
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
                         </div>
+                    <?php else: ?>
+                         <div class="text-center py-10 text-gray-500">
+                            You haven't liked any items yet.
+                            <a href="products.php" class="text-indigo-600 hover:text-indigo-800 font-medium">Browse products to find gifts you love!</a>
+                        </div>
+                    <?php endif; ?>
+                </section>
+
+                <section id="edit-profile" class="content-section-card">
+                     <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-6">
+                        <div>
+                            <h2 class="text-xl lg:text-2xl font-semibold text-gray-900">Profile Information</h2>
+                            <p class="text-gray-600 mt-1 text-sm lg:text-base">Manage your personal details and account information.</p>
+                        </div>
+                        <button class="btn-primary mt-4 lg:mt-0 shrink-0" onclick="openEditProfileModal(event)">
+                            Edit Profile
+                        </button>
+                    </div>
+                    <dl class="grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-2">
+                        <div class="sm:col-span-1">
+                            <dt class="text-sm font-medium text-gray-500">Username</dt>
+                            <dd class="mt-1 text-gray-900 text-base break-words"><?= htmlspecialchars($user['username'] ?? 'N/A') ?></dd>
+                        </div>
+                        <div class="sm:col-span-1">
+                            <dt class="text-sm font-medium text-gray-500">First Name</dt>
+                            <dd class="mt-1 text-gray-900 text-base"><?= htmlspecialchars($user['fname'] ?? 'N/A') ?></dd>
+                        </div>
+                        <div class="sm:col-span-1">
+                            <dt class="text-sm font-medium text-gray-500">Last Name</dt>
+                            <dd class="mt-1 text-gray-900 text-base"><?= htmlspecialchars($user['lname'] ?? 'N/A') ?></dd>
+                        </div>
+                        <div class="sm:col-span-1">
+                            <dt class="text-sm font-medium text-gray-500">Phone Number</dt>
+                            <dd class="mt-1 text-gray-900 text-base"><?= htmlspecialchars($user['phone'] ?? 'N/A') ?></dd>
+                        </div>
+                        <div class="sm:col-span-1">
+                            <dt class="text-sm font-medium text-gray-500">Email address</dt>
+                            <dd class="mt-1 text-gray-900 text-base break-words"><?= htmlspecialchars($user['email'] ?? 'N/A') ?></dd>
+                        </div>
+                        <div class="sm:col-span-1">
+                            <dt class="text-sm font-medium text-gray-500">Member since</dt>
+                            <dd class="mt-1 text-gray-900 text-base">
+                                <?= isset($user['created_at']) ? date('F j, Y', strtotime($user['created_at'])) : 'N/A' ?>
+                            </dd>
+                        </div>
+                    </dl>
+                </section>
+
+                <section id="security" class="content-section-card">
+                     <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between">
+                        <div>
+                            <h2 class="text-xl lg:text-2xl font-semibold text-gray-900">Security Settings</h2>
+                            <p class="text-gray-600 mt-1 text-sm lg:text-base">Update your password to keep your account secure.</p>
+                        </div>
+                         <button class="btn-primary mt-4 lg:mt-0 shrink-0" onclick="openChangePasswordModal(event)">
+                            Change Password
+                        </button>
                     </div>
                 </section>
             </main>
         </div>
     </div>
 
-    <!-- Update Modal -->
-    <div id="updateModal" class="fixed inset-0 bg-black bg-opacity-40 z-50 hidden items-center justify-center p-4"
-        onclick="closeUpdateModal(event)">
-        <div class="bg-white w-full max-w-md mx-auto p-4 lg:p-6 rounded-lg shadow-lg relative"
-            onclick="event.stopPropagation()">
-            <button onclick="closeUpdateModal()"
-                class="absolute top-2 right-3 text-gray-500 hover:text-red-500 text-2xl">&times;</button>
-            <h2 class="text-xl font-bold text-gray-800 mb-4">Update Account Info</h2>
-            <form method="POST" action="update_account.php" class="flex flex-col gap-3 lg:gap-4">
+    <div id="editProfileModal" class="modal-backdrop hidden">
+        <div class="modal-content">
+            <button onclick="closeEditProfileModal()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
+            <h2 class="text-2xl font-semibold text-gray-800 mb-6">Update Account Information</h2>
+            <form method="POST" action="update_account.php" class="space-y-4">
                 <input type="hidden" name="user_id" value="<?= $_SESSION['id'] ?>">
                 <div>
-                    <label class="block text-sm lg:text-base font-medium text-gray-700 mb-1">Username</label>
-                    <input type="text" name="username" value="<?= htmlspecialchars($user['username']) ?>"
-                        class="w-full border px-3 py-2 rounded text-sm lg:text-base" required>
+                    <label for="username_modal" class="block text-sm font-medium text-gray-700 mb-1">Username</label>
+                    <input id="username_modal" type="text" name="username" value="<?= htmlspecialchars($user['username'] ?? '') ?>" class="w-full border-gray-300 rounded-lg shadow-sm focus:ring-[#56c8d8] focus:border-[#56c8d8] sm:text-sm p-2.5" required>
                 </div>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-sm lg:text-base font-medium text-gray-700 mb-1">First Name</label>
-                        <input type="text" name="first_name" value="<?= htmlspecialchars($user['fname']) ?>"
-                            class="w-full border px-3 py-2 rounded text-sm lg:text-base">
+                        <label for="first_name_modal" class="block text-sm font-medium text-gray-700 mb-1">First Name</label>
+                        <input id="first_name_modal" type="text" name="first_name" value="<?= htmlspecialchars($user['fname'] ?? '') ?>" class="w-full border-gray-300 rounded-lg shadow-sm focus:ring-[#56c8d8] focus:border-[#56c8d8] sm:text-sm p-2.5">
                     </div>
                     <div>
-                        <label class="block text-sm lg:text-base font-medium text-gray-700 mb-1">Last Name</label>
-                        <input type="text" name="last_name" value="<?= htmlspecialchars($user['lname']) ?>"
-                            class="w-full border px-3 py-2 rounded text-sm lg:text-base">
+                        <label for="last_name_modal" class="block text-sm font-medium text-gray-700 mb-1">Last Name</label>
+                        <input id="last_name_modal" type="text" name="last_name" value="<?= htmlspecialchars($user['lname'] ?? '') ?>" class="w-full border-gray-300 rounded-lg shadow-sm focus:ring-[#56c8d8] focus:border-[#56c8d8] sm:text-sm p-2.5">
                     </div>
                 </div>
                 <div>
-                    <label class="block text-sm lg:text-base font-medium text-gray-700 mb-1">Phone Number</label>
-                    <input type="tel" name="phone_number" value="<?= htmlspecialchars($user['phone']) ?>"
-                        class="w-full border px-3 py-2 rounded text-sm lg:text-base" pattern="[0-9]{10}">
+                    <label for="phone_modal" class="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
+                    <input id="phone_modal" type="tel" name="phone_number" value="<?= htmlspecialchars($user['phone'] ?? '') ?>" class="w-full border-gray-300 rounded-lg shadow-sm focus:ring-[#56c8d8] focus:border-[#56c8d8] sm:text-sm p-2.5" pattern="[0-9]{10,15}" placeholder="e.g., 0512345678">
                 </div>
                 <div>
-                    <label class="block text-sm lg:text-base font-medium text-gray-700 mb-1">Email</label>
-                    <input type="email" name="email" value="<?= htmlspecialchars($user['email']) ?>"
-                        class="w-full border px-3 py-2 rounded text-sm lg:text-base" required>
+                    <label for="email_modal" class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                    <input id="email_modal" type="email" name="email" value="<?= htmlspecialchars($user['email'] ?? '') ?>" class="w-full border-gray-300 rounded-lg shadow-sm focus:ring-[#56c8d8] focus:border-[#56c8d8] sm:text-sm p-2.5" required>
                 </div>
-                <button type="submit"
-                    class="bg-[#56c8d8] hover:bg-[#45b1c0] text-white px-4 py-2 rounded mt-2 text-sm lg:text-base">
+                <button type="submit" class="w-full btn-primary py-2.5 text-sm font-semibold">
                     Save Changes
                 </button>
             </form>
         </div>
     </div>
 
-    <!-- Change Password Modal -->
-    <div id="changePasswordModal"
-        class="fixed inset-0 z-50 hidden bg-black bg-opacity-50 flex items-center justify-center">
-        <div class="bg-white p-6 rounded-lg shadow-lg w-full max-w-md relative">
-            <button onclick="closeChangePasswordModal()"
-                class="absolute top-3 right-3 text-gray-500 hover:text-red-500 text-2xl">&times;</button>
-            <h2 class="text-xl font-bold mb-4 text-gray-800">🔐 Change Password</h2>
+    <div id="changePasswordModal" class="modal-backdrop hidden">
+        <div class="modal-content">
+            <button onclick="closeChangePasswordModal()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
+            <h2 class="text-2xl font-semibold text-gray-800 mb-2">🔐 Change Password</h2>
+            <p class="text-sm text-gray-500 mb-6">Ensure your account is secure with a strong password.</p>
 
             <form id="changePasswordForm" method="POST" action="verify_change_password.php" class="space-y-4">
                 <input type="hidden" name="userid" value="<?= $_SESSION['id'] ?>">
-
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                    <input type="email" name="email" required class="w-full border rounded px-3 py-2"
-                        placeholder="Enter your email" />
+                    <label for="email_password_modal" class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                    <input id="email_password_modal" type="email" name="email" value="<?= htmlspecialchars($user['email'] ?? '') ?>" placeholder="Enter your email" required class="w-full border-gray-300 rounded-lg shadow-sm focus:ring-[#56c8d8] focus:border-[#56c8d8] sm:text-sm p-2.5">
                 </div>
-
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">New Password</label>
-                    <input type="password" name="new_password" required class="w-full border rounded px-3 py-2"
-                        placeholder="New password" />
+                    <label for="new_password_modal" class="block text-sm font-medium text-gray-700 mb-1">New Password</label>
+                    <input id="new_password_modal" type="password" name="new_password" required class="w-full border-gray-300 rounded-lg shadow-sm focus:ring-[#56c8d8] focus:border-[#56c8d8] sm:text-sm p-2.5" placeholder="Enter new password">
                 </div>
-
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Confirm New Password</label>
-                    <input type="password" name="confirm_password" required class="w-full border rounded px-3 py-2"
-                        placeholder="Confirm new password" />
+                    <label for="confirm_password_modal" class="block text-sm font-medium text-gray-700 mb-1">Confirm New Password</label>
+                    <input id="confirm_password_modal" type="password" name="confirm_password" required class="w-full border-gray-300 rounded-lg shadow-sm focus:ring-[#56c8d8] focus:border-[#56c8d8] sm:text-sm p-2.5" placeholder="Confirm new password">
                 </div>
-
-                <div class="flex items-center justify-between">
-                    <label class="text-sm text-gray-600">OTP Code</label>
-                    <button type="button" onclick="sendOTP()" class="text-sm text-[#56c8d8] hover:underline">Send
-                        OTP</button>
+                <div class="flex items-center justify-between pt-2">
+                    <label for="otp_modal" class="text-sm font-medium text-gray-700">OTP Code</label>
+                    <button type="button" id="sendOtpButton" onclick="sendOTP()" class="text-sm text-[#56c8d8] hover:underline font-medium">Send OTP</button>
                 </div>
-                <input type="text" name="otp" required class="w-full border rounded px-3 py-2"
-                    placeholder="Enter OTP" />
+                <input id="otp_modal" type="text" name="otp" required class="w-full border-gray-300 rounded-lg shadow-sm focus:ring-[#56c8d8] focus:border-[#56c8d8] sm:text-sm p-2.5" placeholder="Enter OTP received by email">
+                <div id="otpMessage" class="text-sm mt-1"></div>
 
-                <button type="submit" class="bg-[#56c8d8] hover:bg-[#45b1c0] text-white px-4 py-2 rounded w-full">
+
+                <button type="submit" class="w-full btn-primary py-2.5 text-sm font-semibold">
                     Update Password
                 </button>
             </form>
         </div>
     </div>
 
+
+    <?php include("footer.php"); ?>
+
     <script>
-        function openUpdateModal() {
-            document.getElementById('updateModal').classList.remove('hidden');
-        }
-        function closeUpdateModal(e) {
-            if (!e || e.target.id === "updateModal") {
-                document.getElementById('updateModal').classList.add('hidden');
+        // --- Section Toggling Logic ---
+        document.addEventListener('DOMContentLoaded', () => {
+            const navButtons = document.querySelectorAll('#pill-navigation button');
+            const contentSections = document.querySelectorAll('main section[id]');
+
+            // Function to show a specific section and hide others
+            function showSection(sectionId) {
+                contentSections.forEach(section => {
+                    if (section.id === sectionId) {
+                        section.classList.add('active-section');
+                         section.style.display = 'block'; // Ensure it's displayed
+                    } else {
+                        section.classList.remove('active-section');
+                        section.style.display = 'none'; // Hide other sections
+                    }
+                });
             }
-        }
-        // Auto-dismiss messages after 3 seconds
-        setTimeout(() => {
-            document.querySelectorAll('[class*="bg-green-50"], [class*="bg-red-50"]').forEach(el => el.remove());
-        }, 3000);
 
-        function openChangePasswordModal() {
-            document.getElementById('changePasswordModal').classList.remove('hidden');
-        }
-        function closeChangePasswordModal() {
-            document.getElementById('changePasswordModal').classList.add('hidden');
-        }
-        const email = document.querySelector('[name="email"]').value;
+            // Function to set the active class on the correct navigation button
+            function setActiveNavButton(sectionId) {
+                navButtons.forEach(button => {
+                    if (button.dataset.section === sectionId) {
+                        button.classList.add('active');
+                    } else {
+                        button.classList.remove('active');
+                    }
+                });
+            }
 
-        fetch('send_otp_phpmailer.php', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: 'email=' + encodeURIComponent(email)
+            // Handle clicks on navigation buttons
+            navButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    const targetSectionId = this.dataset.section; // Get the section ID from data-section attribute
+
+                    // All buttons now trigger section display
+                    showSection(targetSectionId);
+                    setActiveNavButton(targetSectionId);
+
+                    // Update URL hash for direct linking/refresh
+                    if (history.pushState) {
+                        history.pushState(null, null, '#' + targetSectionId);
+                    } else {
+                        window.location.hash = '#' + targetSectionId;
+                    }
+                });
+            });
+
+            // --- Initial Load Logic ---
+            // Determine which section to show on page load
+            const initialHash = window.location.hash.substring(1); // Get hash without '#'
+            const validSectionIds = Array.from(contentSections).map(section => section.id);
+            let sectionToShow = 'orders'; // Default section
+
+            if (initialHash && validSectionIds.includes(initialHash)) {
+                sectionToShow = initialHash; // Show section from hash if valid
+            }
+
+            // Show the determined section and set the active nav button on load
+            showSection(sectionToShow);
+            setActiveNavButton(sectionToShow);
+
+            // --- Modal Handling (Separate from section toggling) ---
+            // These functions are now only called by the buttons *within* the sections
+            // (e.g., the "Edit Profile" button inside the #edit-profile section)
+            function openModal(modalId) {
+                const modal = document.getElementById(modalId);
+                if (modal) {
+                    modal.classList.remove('hidden');
+                    // Use requestAnimationFrame for smoother transition start
+                    requestAnimationFrame(() => {
+                         modal.classList.add('visible'); // Use 'visible' class for opacity/transform
+                         modal.querySelector('.modal-content').classList.remove('scale-95');
+                    });
+                }
+            }
+
+            function closeModal(modalId) {
+                const modal = document.getElementById(modalId);
+                if (modal) {
+                    modal.classList.remove('visible');
+                    modal.querySelector('.modal-content').classList.add('scale-95');
+                    // Hide completely after transition
+                    modal.addEventListener('transitionend', function handler() {
+                         modal.classList.add('hidden');
+                         modal.removeEventListener('transitionend', handler);
+                    });
+                }
+            }
+
+            // Add click listener to backdrop to close modal
+            document.querySelectorAll('.modal-backdrop').forEach(backdrop => {
+                backdrop.addEventListener('click', function(event) {
+                    if (event.target === this) { // Check if click is directly on the backdrop
+                         closeModal(this.id);
+                    }
+                });
+            });
+
+
+            // Specific Modal Functions (called by inline onclick or JS event listeners)
+            // Made these global so they can be called from inline onclick attributes
+            window.openEditProfileModal = function(event) {
+                 if(event) event.preventDefault(); // Prevent default if called from link
+                 openModal('editProfileModal');
+            }
+            window.closeEditProfileModal = function() {
+                 closeModal('editProfileModal');
+            }
+
+            window.openChangePasswordModal = function(event) {
+                 if(event) event.preventDefault(); // Prevent default if called from link
+                 openModal('changePasswordModal');
+            }
+             window.closeChangePasswordModal = function() {
+                 closeModal('changePasswordModal');
+            }
+
+
+            // --- Auto-dismiss messages ---
+            function autoDismissMessages() {
+                const successMessage = document.getElementById('successMessage'); // For profile update
+                const errorMessage = document.getElementById('errorMessage');     // For profile update
+                const removeSuccessMessage = document.getElementById('removeSuccessMessage'); // For remove from likes
+                const removeErrorMessage = document.getElementById('removeErrorMessage');     // For remove from likes
+
+                if (successMessage) {
+                    setTimeout(() => { successMessage.style.display = 'none'; }, 5000);
+                }
+                if (errorMessage) {
+                    setTimeout(() => { errorMessage.style.display = 'none'; }, 5000);
+                }
+                if (removeSuccessMessage) {
+                    setTimeout(() => { removeSuccessMessage.style.display = 'none'; }, 5000);
+                }
+                if (removeErrorMessage) {
+                    setTimeout(() => { removeErrorMessage.style.display = 'none'; }, 5000);
+                }
+            }
+            autoDismissMessages(); // Call on page load
+
+             // --- Send OTP function ---
+            window.sendOTP = function() { // Make it a global function
+                const emailInput = document.querySelector('#changePasswordModal [name="email"]');
+                const email = emailInput.value.trim();
+                const otpMessageDiv = document.getElementById('otpMessage');
+                const sendOtpButton = document.getElementById('sendOtpButton');
+
+                if (!email) {
+                    otpMessageDiv.textContent = 'Please enter your email address first.';
+                    otpMessageDiv.className = 'text-sm mt-1 text-red-600';
+                    return;
+                }
+
+                sendOtpButton.disabled = true;
+                sendOtpButton.textContent = 'Sending...';
+                otpMessageDiv.textContent = 'Sending OTP...';
+                otpMessageDiv.className = 'text-sm mt-1 text-gray-600';
+
+
+                fetch('send_otp_phpmailer.php', { // Ensure this path is correct
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: 'email=' + encodeURIComponent(email)
+                })
+                .then(response => {
+                     if (!response.ok) {
+                         // Handle HTTP errors
+                         throw new Error(`HTTP error! status: ${response.status}`);
+                     }
+                     return response.json(); // Expecting JSON response
+                })
+                .then(data => {
+                    if (data.success) {
+                        otpMessageDiv.textContent = 'OTP sent! Check your email. It might be in spam.';
+                        otpMessageDiv.className = 'text-sm mt-1 text-green-600';
+                    } else {
+                        otpMessageDiv.textContent = data.message || 'Failed to send OTP. Please try again.';
+                        otpMessageDiv.className = 'text-sm mt-1 text-red-600';
+                         console.error("Send OTP Error: " + (data.message || 'Unknown error')); // Log server-side message
+                    }
+                })
+                .catch(error => {
+                    console.error('Error sending OTP:', error);
+                    otpMessageDiv.textContent = 'An error occurred. Failed to send OTP.';
+                    otpMessageDiv.className = 'text-sm mt-1 text-red-600';
+                     console.error("Send OTP Fetch Error: " + error); // Log fetch error
+                })
+                .finally(() => {
+                     sendOtpButton.disabled = false;
+                     sendOtpButton.textContent = 'Resend OTP';
+                });
+            }
         });
-
     </script>
 </body>
-
 </html>

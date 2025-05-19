@@ -206,7 +206,7 @@ $orders = $db->query($order_sql);
 
         <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
           <h2 class="text-xl lg:text-2xl font-semibold text-gray-900 mb-4">Manage Users</h2>
-          <p class="text-gray-500 text-sm mb-4">View, promote, or remove users. You can also add new delivery persons
+          <p class="text-gray-500 text-sm mb-4">View, edit or remove users. You can also add new delivery persons
             below.</p>
 
           <!-- Add Delivery Person Modal -->
@@ -291,7 +291,6 @@ $orders = $db->query($order_sql);
                     <td class="px-4 py-3 text-gray-800"><?= ucfirst($row['role']) ?></td>
                     <td class="px-4 py-3 text-center">
                       <?php if ($row['role'] === 'client' || $row['role'] === 'delivery person'): ?>
-                        <a href="promote_user.php?id=<?= $row['id'] ?>" class="text-[#56c8d8] hover:underline">Promote</a>
                         <a href="delete_user.php?id=<?= $row['id'] ?>" class="ml-4 text-red-500 hover:underline">Delete</a>
                       <?php else: ?>
                         <span class="text-gray-400">No actions</span>

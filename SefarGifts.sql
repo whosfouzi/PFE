@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1:3306
--- Generation Time: May 12, 2025 at 07:12 PM
+-- Generation Time: May 19, 2025 at 11:14 PM
 -- Server version: 8.3.0
 -- PHP Version: 8.2.18
 
@@ -34,14 +34,14 @@ CREATE TABLE IF NOT EXISTS `cart` (
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   KEY `user_id` (`user_id`)
-) ENGINE=MyISAM AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=MyISAM AUTO_INCREMENT=9 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 --
 -- Dumping data for table `cart`
 --
 
 INSERT INTO `cart` (`id`, `user_id`, `created_at`) VALUES
-(1, 8, '2025-04-29 15:15:57'),
+(8, 8, '2025-05-19 18:38:25'),
 (2, 7, '2025-04-29 17:15:44'),
 (3, 12, '2025-05-05 17:33:16');
 
@@ -60,49 +60,7 @@ CREATE TABLE IF NOT EXISTS `cart_items` (
   PRIMARY KEY (`id`),
   KEY `cart_id` (`cart_id`),
   KEY `product_id` (`product_id`)
-) ENGINE=MyISAM AUTO_INCREMENT=28 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-
---
--- Dumping data for table `cart_items`
---
-
-INSERT INTO `cart_items` (`id`, `cart_id`, `product_id`, `quantity`) VALUES
-(21, 2, 2, 1),
-(20, 2, 150, 4),
-(19, 2, 151, 1),
-(18, 2, 155, 2),
-(22, 2, 149, 1),
-(24, 1, 155, 1),
-(27, 3, 155, 2);
-
--- --------------------------------------------------------
-
---
--- Table structure for table `checkout`
---
-
-DROP TABLE IF EXISTS `checkout`;
-CREATE TABLE IF NOT EXISTS `checkout` (
-  `id` int NOT NULL AUTO_INCREMENT,
-  `name` varchar(100) NOT NULL,
-  `email` varchar(150) NOT NULL,
-  `phone` varchar(20) NOT NULL,
-  `address` varchar(255) NOT NULL,
-  `card_name` varchar(100) NOT NULL,
-  `card_no` varchar(20) NOT NULL,
-  `exp_year` varchar(4) NOT NULL,
-  `exp_month` tinyint NOT NULL,
-  `cvv` varchar(4) NOT NULL,
-  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`)
-) ENGINE=MyISAM AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-
---
--- Dumping data for table `checkout`
---
-
-INSERT INTO `checkout` (`id`, `name`, `email`, `phone`, `address`, `card_name`, `card_no`, `exp_year`, `exp_month`, `cvv`, `created_at`) VALUES
-(1, 'Faouzi', 'fouzi.slimani75@gmail.com', '0793642323', 'cite 11 dzevzvz', 'giftstore', '8888888888884444', '2025', 15, '325', '2025-04-11 22:33:17');
+) ENGINE=MyISAM AUTO_INCREMENT=48 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 -- --------------------------------------------------------
 
@@ -117,28 +75,24 @@ CREATE TABLE IF NOT EXISTS `orders` (
   `email` varchar(150) DEFAULT NULL,
   `address` text,
   `total_price` decimal(10,2) DEFAULT NULL,
-  `payment_status` enum('pending','paid','failed') DEFAULT 'pending',
-  `order_status` enum('processing','shipped','cancelled') DEFAULT 'processing',
+  `order_status` enum('processing','validated','completed','cancelled','returned') CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT 'processing',
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   `phone` varchar(20) DEFAULT NULL,
   `user_id` int DEFAULT NULL,
-  PRIMARY KEY (`id`)
-) ENGINE=MyISAM AUTO_INCREMENT=16 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  PRIMARY KEY (`id`),
+  KEY `user_id` (`user_id`)
+) ENGINE=MyISAM AUTO_INCREMENT=24 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 --
 -- Dumping data for table `orders`
 --
 
-INSERT INTO `orders` (`id`, `user_name`, `email`, `address`, `total_price`, `payment_status`, `order_status`, `created_at`, `phone`, `user_id`) VALUES
-(8, 'ff sli', 'fouzi@gmail.com', 'gggg', 100.00, 'pending', 'cancelled', '2025-04-18 22:48:24', '0793642323', 8),
-(7, 'fou sli', 'fouzi@gmail.com', 'cite 11 decembre boumerdes', 8000.00, 'pending', 'cancelled', '2025-04-18 21:57:01', '0793642323', NULL),
-(9, 'ff sli', 'fouzi@gmail.com', 'cite 11 decembre boumerdes', 6000.00, 'pending', 'shipped', '2025-04-22 17:48:30', '0793642323', NULL),
-(10, 'Adel Derdiche', 'adelwwe50@gmail.com', '22248', 6000.00, 'pending', 'shipped', '2025-04-24 10:43:32', '0770235689', NULL),
-(11, 'Adel Derdiche', 'fouzi75@gmail.com', 'gggg', 3000.00, 'pending', 'cancelled', '2025-04-30 09:00:49', '0770235689', NULL),
-(12, 'Adel Derdiche', 'fouzi75@gmail.com', 'gggg', 20200.00, 'pending', 'cancelled', '2025-05-02 14:25:22', '0770235689', NULL),
-(13, 'fouzi fouzi', 'fouzi@gmail.com', 'gggg', 100.00, 'pending', 'shipped', '2025-05-03 13:35:01', '0793642323', 8),
-(14, 'ramzy  tazekrit', 'tazekrittramzy@gmail.com', 'rouiba', 100.00, 'pending', 'shipped', '2025-05-05 17:33:57', '0559469395', 12),
-(15, 'ramzy  tazekrit', 'tazekrittramzy@gmail.com', 'rouiba', 100.00, 'pending', 'processing', '2025-05-05 17:48:54', '0559469395', 12);
+INSERT INTO `orders` (`id`, `user_name`, `email`, `address`, `total_price`, `order_status`, `created_at`, `phone`, `user_id`) VALUES
+(16, 'fouzi slimani', 'anisanis@gmail.com', 'cite 11 decembre bt35 porte 2 boumerdes', 699.00, 'cancelled', '2025-05-18 19:41:29', '0793642323', 8),
+(17, 'fouzi slimani', 'anisanis@gmail.com', 'cite 11 decembre bt35 porte 2 boumerdes', 100.00, 'cancelled', '2025-05-18 19:46:23', '0793642323', 8),
+(18, 'fouzi slimani', 'anisanis@gmail.com', 'cite 11 decembre bt35 porte 2 boumerdes', 100.00, 'cancelled', '2025-05-18 22:18:45', '0793642323', 8),
+(19, 'fouzi slimani', 'anisanis@gmail.com', 'cite 11 decembre bt35 porte 2 boumerdes', 300.00, 'processing', '2025-05-18 22:22:19', '0793642323', 8),
+(20, 'fouzi slimani', 'anisanis@gmail.com', 'cite 11 decembre bt35 porte 2 boumerdes', 200.00, 'completed', '2025-05-19 12:36:25', '0793642323', 8);
 
 -- --------------------------------------------------------
 
@@ -157,30 +111,23 @@ CREATE TABLE IF NOT EXISTS `order_items` (
   PRIMARY KEY (`id`),
   KEY `order_id` (`order_id`),
   KEY `product_id` (`product_id`)
-) ENGINE=MyISAM AUTO_INCREMENT=18 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=MyISAM AUTO_INCREMENT=28 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 --
 -- Dumping data for table `order_items`
 --
 
 INSERT INTO `order_items` (`id`, `order_id`, `product_id`, `quantity`, `unit_price`, `product_name`) VALUES
-(1, 3, 150, 1, 3000.00, 'Casio'),
-(2, 3, 78, 1, 599.00, 'Captain'),
-(3, 4, 32, 1, 100.00, 'Coin purse'),
-(4, 4, 149, 4, 400.00, 'monkey top'),
-(5, 5, 149, 1, 400.00, 'monkey top'),
-(6, 7, 2, 1, 8000.00, 'watch2'),
-(7, 8, 32, 1, 100.00, 'Coin purse'),
-(8, 9, 150, 2, 3000.00, 'Casio'),
-(9, 10, 150, 2, 3000.00, 'Casio'),
-(10, 11, 150, 1, 3000.00, 'Casio'),
-(11, 12, 2, 1, 8000.00, 'watch2'),
-(12, 12, 150, 4, 3000.00, 'Casio'),
-(13, 12, 151, 1, 100.00, 'Casio Illuminator'),
-(14, 12, 155, 1, 100.00, 'Black Leather Bifold wallet'),
-(15, 13, 155, 1, 100.00, 'Black Leather Bifold wallet'),
-(16, 14, 151, 1, 100.00, 'Casio Illuminator'),
-(17, 15, 151, 1, 100.00, 'Casio Illuminator');
+(20, 17, 151, 1, 100.00, 'Casio Illuminator'),
+(19, 16, 155, 1, 100.00, 'Black Leather Bifold wallet'),
+(18, 16, 78, 1, 599.00, 'Captain'),
+(21, 18, 151, 1, 100.00, 'Casio Illuminator'),
+(22, 19, 155, 3, 100.00, 'Black Leather Bifold wallet'),
+(23, 20, 155, 2, 100.00, 'Black Leather Bifold wallet'),
+(24, 21, 155, 2, 100.00, 'Black Leather Bifold wallet'),
+(25, 22, 155, 1, 100.00, 'Black Leather Bifold wallet'),
+(26, 23, 151, 2, 100.00, 'Casio Illuminator'),
+(27, 23, 150, 2, 3000.00, 'Casio');
 
 -- --------------------------------------------------------
 
@@ -238,7 +185,7 @@ INSERT INTO `products` (`id`, `name`, `image`, `price`, `stock`, `category`, `de
 (30, 'Vegan wallet', '111.jpg', 400.00, 0, 'Wallets', NULL, 'Gifts for Him'),
 (31, 'Leather handbag', '112.jpg', 550.00, 0, 'Wallets', NULL, 'Gifts for Him'),
 (32, 'Coin purse', '113.jpg', 100.00, 3, 'Wallets', NULL, 'Gifts for Him'),
-(150, 'Casio', '20250410_1918_Heart-Themed Background_remix_01jrgep2cyes6sdhv3xecyvbn3.png', 3000.00, 5, 'Watches', NULL, 'Gifts for Him'),
+(150, 'Casio', '20250410_1918_Heart-Themed Background_remix_01jrgep2cyes6sdhv3xecyvbn3.png', 3000.00, 3, 'Watches', NULL, 'Gifts for Him'),
 (49, 'bracelet', 'bracelet.jpg', 699.00, 0, 'Jewellery', NULL, 'Gifts for Her'),
 (50, 'silver pearl earings', '2.jpg', 559.00, 0, 'Jewellery', NULL, 'Gifts for Her'),
 (51, 'blue woolen earing', '3.jpg', 59.00, 0, 'Jewellery', NULL, 'Gifts for Her'),
@@ -305,11 +252,38 @@ INSERT INTO `products` (`id`, `name`, `image`, `price`, `stock`, `category`, `de
 (129, 'Rainbow cushion', '66.jpg', 349.00, 0, 'Soft Toys', NULL, 'Gifts for Her'),
 (128, 'Peach plush', '65.jpg', 200.00, 0, 'Soft Toys', NULL, 'Gifts for Her'),
 (127, 'Turtle', '64.jpg', 459.00, 0, 'Soft Toys', NULL, 'Gifts for Her'),
-(151, 'Casio Illuminator', 'pavlo-talpa-inhasepzxy4-unsplash.jpg', 100.00, 5, 'Watches', NULL, 'Gifts for Him'),
+(151, 'Casio Illuminator', 'pavlo-talpa-inhasepzxy4-unsplash.jpg', 100.00, 3, 'Watches', NULL, 'Gifts for Him'),
 (154, 'Silver-Colored earring', 'earrings.jpg', 599.00, 5, 'Jewellery', 'Pair of Silver-Colored earring with blue gemstone', 'Gifts for Her'),
-(155, 'Black Leather Bifold wallet', 'mason-supply--lN0HnySy7w-unsplash.jpg', 100.00, 5, 'Wallets', 'Black Leather Bifold wallet', 'Gifts for Him'),
+(155, 'Black Leather Bifold wallet', 'mason-supply--lN0HnySy7w-unsplash.jpg', 100.00, 0, 'Wallets', 'Black Leather Bifold wallet', 'Gifts for Him'),
 (156, 'Wooden toy', 'sebastian-olivos-JfTDS6At7-8-unsplash.jpg', 4000.00, 5, 'Kids', 'a wooden toy with lots of colorful toys on top of it', 'Gifts for Kids'),
-(157, 'Botanic Harmony Ceramic Plate Set', 'micheile-henderson-agyV2HOf5UM-unsplash.jpg', 3000.00, 14, 'Crockery', 'Elevate your dining experience with the Botanic Harmony plate set — a stunning fusion of nature-inspired elegance and artisanal craftsmanship. Featuring intricately embossed green and blush pink leaf motifs, each piece in this collection adds a fresh, org', 'Home & Decor');
+(157, 'Botanic Harmony Ceramic Plate Set', 'micheile-henderson-agyV2HOf5UM-unsplash.jpg', 3000.00, 14, 'Crockery', 'Elevate your dining experience with the Botanic Harmony plate set', 'Home & Decor');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `reviews`
+--
+
+DROP TABLE IF EXISTS `reviews`;
+CREATE TABLE IF NOT EXISTS `reviews` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `user_id` int NOT NULL,
+  `order_id` int NOT NULL,
+  `rating` int DEFAULT NULL,
+  `comment` text,
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_user_order_review` (`user_id`,`order_id`),
+  KEY `idx_order_id` (`order_id`),
+  KEY `idx_user_id` (`user_id`)
+) ;
+
+--
+-- Dumping data for table `reviews`
+--
+
+INSERT INTO `reviews` (`id`, `user_id`, `order_id`, `rating`, `comment`, `created_at`) VALUES
+(1, 8, 20, 3, NULL, '2025-05-19 23:02:57');
 
 -- --------------------------------------------------------
 
@@ -326,10 +300,10 @@ CREATE TABLE IF NOT EXISTS `users` (
   `email` varchar(30) NOT NULL,
   `username` varchar(10) NOT NULL,
   `password` varchar(255) DEFAULT NULL,
-  `role` enum('admin','client','delivery person') NOT NULL DEFAULT 'client',
+  `role` enum('admin','client') CHARACTER SET latin1 COLLATE latin1_swedish_ci NOT NULL DEFAULT 'client',
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=15 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=16 DEFAULT CHARSET=latin1;
 
 --
 -- Dumping data for table `users`
@@ -337,11 +311,35 @@ CREATE TABLE IF NOT EXISTS `users` (
 
 INSERT INTO `users` (`id`, `fname`, `lname`, `phone`, `email`, `username`, `password`, `role`, `created_at`) VALUES
 (7, 'fouzi', 'sli', 793642323, 'fouzi75@gmail.com', 'fouzi', '$2y$10$e2XOF8zKkzXNX8wLJNDyleinxu0GNRrkVexJrpeoKK6FxOggQjpM.', 'admin', '2025-05-03 13:05:32'),
-(8, 'fouzi', 'slimani', 793642323, 'fouzi75@gmail.com', 'fou', '$2y$10$e2XOF8zKkzXNX8wLJNDyleinxu0GNRrkVexJrpeoKK6FxOggQjpM.', 'client', '2025-05-03 13:05:32'),
+(8, 'fouzi', 'slimani', 793642323, 'anisanis@gmail.com', 'fou', '$2y$10$Lj1Y2Ww/WYlCEJy1gH7Z1Ov/5GzfDbB1nMfA0cXi0vdXlKloJlSfC', 'client', '2025-05-03 13:05:32'),
 (10, 'hani', 'derradj', 793642323, 'hani@gmail.com', 'hannni', '$2y$10$Az7PFkeJ.p0obyZW6x/KjeEpf/61hK.AJv6mX0b6p3HtajQDjd2Va', 'client', '2025-05-04 12:11:07'),
 (12, 'ramzy', 'tazekrit', 559469395, 'tazekrittramzy@gmail.com', '911', '$2y$10$ZC9yyUO6B20Nyytctc2tkOy1zDMV8fTNSm1B8LdtVtkFxch91Wf3i', 'client', '2025-05-05 17:23:59'),
-(13, 'fouzi', 'slimani', 793642323, 'feliz.fe75@gmail.com', 'feliz', '$2y$10$ANrqwlztdJ.g3VmGyJXG8eXwFe2L4smIoWUNr2HjaEZqpyzTxRxTK', 'delivery person', '2025-05-05 22:05:45'),
-(14, 'anis', 'anis', 793642323, 'feliz5@gmail.com', 'anis', '$2y$10$oS4ehwLps72i1T0efK5w/.qQXFmR1mfl5BmKybCHmNgDm6a0AXfeG', 'delivery person', '2025-05-05 22:14:05');
+(15, 'fouzi', 'fouzi', 793642323, 'fouzi.slimani75@gmail.com', 'fousli', '$2y$10$hQ0qWyforXHgSAaznBs6uO4qTpgaSLirew.pBlQuR9/ZpVsw/dFSm', 'client', '2025-05-19 23:12:17');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `wishlist`
+--
+
+DROP TABLE IF EXISTS `wishlist`;
+CREATE TABLE IF NOT EXISTS `wishlist` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `user_id` int NOT NULL,
+  `product_id` int NOT NULL,
+  `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `user_id` (`user_id`),
+  KEY `product_id` (`product_id`)
+) ENGINE=MyISAM AUTO_INCREMENT=14 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+--
+-- Dumping data for table `wishlist`
+--
+
+INSERT INTO `wishlist` (`id`, `user_id`, `product_id`, `created_at`) VALUES
+(12, 8, 155, '2025-05-19 18:49:02'),
+(13, 12, 2, '2025-05-19 23:01:39');
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
