@@ -34,15 +34,17 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['submit_review'])) {
     // Validate submitted data
     if (!filter_var($submitted_order_id, FILTER_VALIDATE_INT) || $submitted_order_id <= 0 ||
         !filter_var($rating, FILTER_VALIDATE_INT) || $rating < 1 || $rating > 5) {
-        $error_message = "Invalid review data submitted.";
-         error_log("Review Submission Error: Invalid data for user ID: $user_id, Order ID: $submitted_order_id, Rating: $rating");
-
+        $error_message = "Invalid review data submitted (Order ID or Rating).";
+        error_log("Review Submission Error: Invalid data for user ID: $user_id, Order ID: $submitted_order_id, Rating: $rating");
+    } elseif (empty($comment)) { // NEW: Check if comment is empty
+        $error_message = "Review comment cannot be empty.";
+        error_log("Review Submission Error: Empty comment for user ID: $user_id, Order ID: $submitted_order_id");
     } else {
         // Verify the order belongs to the user and is completed
         $stmt_verify_order = $db->prepare("SELECT id FROM orders WHERE id = ? AND user_id = ? AND order_status = 'completed'");
         if (!$stmt_verify_order) {
-             error_log("Review Submission Error: Verify order prepare failed: " . $db->error);
-             $error_message = "An error occurred verifying your order.";
+            error_log("Review Submission Error: Verify order prepare failed: " . $db->error);
+            $error_message = "An error occurred verifying your order.";
         } else {
             $stmt_verify_order->bind_param("ii", $submitted_order_id, $user_id);
             $stmt_verify_order->execute();
@@ -50,56 +52,54 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['submit_review'])) {
 
             if ($stmt_verify_order->num_rows === 0) {
                 $error_message = "Order not found, not completed, or does not belong to you.";
-                 error_log("Review Submission Error: Order verification failed for user ID: $user_id, Order ID: $submitted_order_id");
+                error_log("Review Submission Error: Order verification failed for user ID: $user_id, Order ID: $submitted_order_id");
             } else {
                 // Check if a review already exists for this order by this user
                 $stmt_check_review = $db->prepare("SELECT id FROM reviews WHERE user_id = ? AND order_id = ?");
-                 if (!$stmt_check_review) {
-                     error_log("Review Submission Error: Check review prepare failed: " . $db->error);
-                     $error_message = "An error occurred checking for existing review.";
-                 } else {
+                if (!$stmt_check_review) {
+                    error_log("Review Submission Error: Check review prepare failed: " . $db->error);
+                    $error_message = "An error occurred checking for existing review.";
+                } else {
                     $stmt_check_review->bind_param("ii", $user_id, $submitted_order_id);
                     $stmt_check_review->execute();
                     $stmt_check_review->store_result();
 
                     if ($stmt_check_review->num_rows > 0) {
                         $error_message = "You have already submitted a review for this order.";
-                         error_log("Review Submission Error: Duplicate review attempt for user ID: $user_id, Order ID: $submitted_order_id");
+                        error_log("Review Submission Error: Duplicate review attempt for user ID: $user_id, Order ID: $submitted_order_id");
                     } else {
                         // Insert the new review
                         $stmt_insert_review = $db->prepare("INSERT INTO reviews (user_id, order_id, rating, comment) VALUES (?, ?, ?, ?)");
-                         if (!$stmt_insert_review) {
-                             error_log("Review Submission Error: Insert review prepare failed: " . $db->error);
-                             $error_message = "An error occurred saving your review.";
-                         } else {
-                            // Handle optional comment - bind null if empty
-                            $comment_to_bind = !empty($comment) ? $comment : null;
-                            $stmt_insert_review->bind_param("iiis", $user_id, $submitted_order_id, $rating, $comment_to_bind);
+                        if (!$stmt_insert_review) {
+                            error_log("Review Submission Error: Insert review prepare failed: " . $db->error);
+                            $error_message = "An error occurred saving your review.";
+                        } else {
+                            // Comment is now required, so no need to check if empty for binding null
+                            $stmt_insert_review->bind_param("iiis", $user_id, $submitted_order_id, $rating, $comment);
 
                             if ($stmt_insert_review->execute()) {
                                 $success_message = "Your review has been submitted successfully!";
-                                 error_log("Review Submission Info: Review submitted for user ID: $user_id, Order ID: $submitted_order_id");
+                                error_log("Review Submission Info: Review submitted for user ID: $user_id, Order ID: $submitted_order_id");
                             } else {
                                 $error_message = "Failed to save your review. Please try again.";
-                                 error_log("Review Submission Error: Failed to execute insert review: " . $stmt_insert_review->error);
+                                error_log("Review Submission Error: Failed to execute insert review: " . $stmt_insert_review->error);
                             }
                             $stmt_insert_review->close();
-                         }
+                        }
                     }
                     $stmt_check_review->close();
-                 }
+                }
             }
             $stmt_verify_order->close();
         }
     }
 
     // Redirect after POST to prevent form resubmission and show message
-    // Pass messages via URL parameters for simplicity, or use session flash messages
     $redirect_url = 'my_account.php#orders'; // Redirect back to orders section
     if ($success_message) {
         $redirect_url .= '&review_message=' . urlencode($success_message);
     } elseif ($error_message) {
-         $redirect_url .= '&review_error=' . urlencode($error_message);
+        $redirect_url .= '&review_error=' . urlencode($error_message);
     }
     header("Location: " . $redirect_url);
     exit();
@@ -124,26 +124,26 @@ if ($order_id) {
             if (strtolower($order_details['order_status']) !== 'completed') {
                 $error_message = "This order is not yet completed and cannot be reviewed.";
                 $order_details = null; // Clear details if not completed
-                 error_log("Review Page Error: Attempted to review non-completed order ID: $order_id for user ID: $user_id");
+                error_log("Review Page Error: Attempted to review non-completed order ID: $order_id for user ID: $user_id");
             } else {
-                 // Fetch order items
+                // Fetch order items
                 $stmt_items = $db->prepare("SELECT product_name, quantity, unit_price FROM order_items WHERE order_id = ?");
-                 if (!$stmt_items) {
-                     error_log("Review Page Error: Fetch order items prepare failed: " . $db->error);
-                     $error_message = "An error occurred fetching order items."; // Keep order details, but show item error
-                 } else {
+                if (!$stmt_items) {
+                    error_log("Review Page Error: Fetch order items prepare failed: " . $db->error);
+                    $error_message = "An error occurred fetching order items."; // Keep order details, but show item error
+                } else {
                     $stmt_items->bind_param("i", $order_id);
                     $stmt_items->execute();
                     $order_items = $stmt_items->get_result()->fetch_all(MYSQLI_ASSOC);
                     $stmt_items->close();
-                 }
+                }
 
                 // Check if a review already exists for this order by this user
                 $stmt_existing_review = $db->prepare("SELECT rating, comment, created_at FROM reviews WHERE user_id = ? AND order_id = ?");
-                 if (!$stmt_existing_review) {
-                     error_log("Review Page Error: Check existing review prepare failed: " . $db->error);
-                     // Continue without showing existing review if error
-                 } else {
+                if (!$stmt_existing_review) {
+                    error_log("Review Page Error: Check existing review prepare failed: " . $db->error);
+                    // Continue without showing existing review if error
+                } else {
                     $stmt_existing_review->bind_param("ii", $user_id, $order_id);
                     $stmt_existing_review->execute();
                     $result_existing_review = $stmt_existing_review->get_result();
@@ -151,18 +151,18 @@ if ($order_id) {
                         $existing_review = $result_existing_review->fetch_assoc();
                     }
                     $stmt_existing_review->close();
-                 }
+                }
             }
 
         } else {
             $error_message = "Order not found or does not belong to you.";
-             error_log("Review Page Error: Order ID ($order_id) not found or user mismatch for user ID: $user_id");
+            error_log("Review Page Error: Order ID ($order_id) not found or user mismatch for user ID: " . ($user_id ?? 'NULL'));
         }
         $stmt_order->close();
     }
 } else {
     $error_message = "No order specified for review.";
-     error_log("Review Page Error: No order_id provided for user ID: " . ($user_id ?? 'NULL'));
+    error_log("Review Page Error: No order_id provided for user ID: " . ($user_id ?? 'NULL'));
 }
 
 
@@ -275,7 +275,7 @@ $db->close(); // Close database connection
                             echo str_repeat('<span class="empty-star">★</span>', $empty_stars);
                             ?>
                         </div>
-                        <?php if (!empty($existing_review['comment'])): ?>
+                        <?php if (!empty($existing_review['comment'])): // Comment is now required, but display it if it exists from older reviews ?>
                              <p class="text-gray-700 italic">"<?= nl2br(htmlspecialchars($existing_review['comment'])) ?>"</p>
                         <?php endif; ?>
                          <p class="text-sm text-gray-500 mt-2">Submitted on <?= date('F j, Y', strtotime($existing_review['created_at'])) ?></p>
@@ -301,8 +301,8 @@ $db->close(); // Close database connection
                         </div>
 
                         <div>
-                            <label for="comment" class="block text-lg font-semibold text-gray-700 mb-2">Your Comment (Optional):</label>
-                            <textarea id="comment" name="comment" rows="4" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-turquoise-primary focus:border-turquoise-primary"></textarea>
+                            <label for="comment" class="block text-lg font-semibold text-gray-700 mb-2">Your Comment:</label>
+                            <textarea id="comment" name="comment" rows="4" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-turquoise-primary focus:border-turquoise-primary" placeholder="Share your experience..."></textarea>
                         </div>
 
                         <div class="text-center">

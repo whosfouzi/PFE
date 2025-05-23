@@ -189,6 +189,17 @@ $db->close(); // Close database connection
         .btn-primary:hover {
             background-color: #45b1c0; /* Darker shade of primary */
         }
+        .btn-secondary {
+            background-color: #e5e7eb; /* Tailwind gray-200 */
+            color: #374151; /* Tailwind gray-700 */
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            transition: background-color 0.2s ease;
+            font-weight: 500;
+        }
+        .btn-secondary:hover {
+            background-color: #d1d5db; /* Darker gray */
+        }
 
         /* Table styling adjustments */
         .orders-table th {
@@ -284,6 +295,8 @@ $db->close(); // Close database connection
                              elseif ($error_type === 'username_taken') echo 'Username already taken. Please choose another.';
                             elseif ($error_type === 'email_taken') echo 'Email already taken. Please choose another.';
                             elseif ($error_type === 'update_failed') echo 'An error occurred while updating your account.';
+                            elseif ($error_type === 'otp_invalid') echo 'Invalid or expired OTP. Please try again.';
+                            elseif ($error_type === 'otp_resend') echo 'OTP sent! Check your email.';
                             else echo 'An unknown error occurred.';
                             ?>
                         </p>
@@ -458,14 +471,11 @@ $db->close(); // Close database connection
                                             </a>
                                         </h3>
                                         <div class="mt-3 flex justify-between items-center">
-                                            <span class="text-[#56c8d8] font-bold text-xl">DA <?= number_format($item['price'], 2) ?></span>
-                                            <div class="flex gap-2">
-                                                <a href="remove_from_wishlist.php?id=<?= $item['id'] ?>&return_url=<?= urlencode($_SERVER['REQUEST_URI']) ?>#likes"
-                                                   class="px-3 py-1.5 bg-red-500 text-white rounded-md hover:bg-red-600 text-xs font-medium transition-colors"
-                                                   title="Remove from Likes">
-                                                    Remove
-                                                </a>
-                                            </div>
+                                            <a href="remove_from_wishlist.php?id=<?= $item['id'] ?>&return_url=<?= urlencode($_SERVER['REQUEST_URI']) ?>#likes"
+                                               class="px-3 py-1.5 bg-red-500 text-white rounded-md hover:bg-red-600 text-xs font-medium transition-colors"
+                                               title="Remove from Likes">
+                                                Remove
+                                            </a>
                                         </div>
                                     </div>
                                 </div>
@@ -517,6 +527,18 @@ $db->close(); // Close database connection
                             </dd>
                         </div>
                     </dl>
+
+                    <div class="mt-8 pt-6 border-t border-gray-200">
+                        <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between">
+                            <div>
+                                <h3 class="text-lg font-semibold text-gray-900">Email Address Settings</h3>
+                                <p class="text-gray-600 mt-1 text-sm">Change your email address and verify it with an OTP.</p>
+                            </div>
+                            <button class="btn-primary mt-4 lg:mt-0 shrink-0" onclick="openChangeEmailModal(event)">
+                                Change Email Address
+                            </button>
+                        </div>
+                    </div>
                 </section>
 
                 <section id="security" class="content-section-card">
@@ -558,12 +580,38 @@ $db->close(); // Close database connection
                     <label for="phone_modal" class="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
                     <input id="phone_modal" type="tel" name="phone_number" value="<?= htmlspecialchars($user['phone'] ?? '') ?>" class="w-full border-gray-300 rounded-lg shadow-sm focus:ring-[#56c8d8] focus:border-[#56c8d8] sm:text-sm p-2.5" pattern="[0-9]{10,15}" placeholder="e.g., 0512345678">
                 </div>
-                <div>
-                    <label for="email_modal" class="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                    <input id="email_modal" type="email" name="email" value="<?= htmlspecialchars($user['email'] ?? '') ?>" class="w-full border-gray-300 rounded-lg shadow-sm focus:ring-[#56c8d8] focus:border-[#56c8d8] sm:text-sm p-2.5" required>
-                </div>
                 <button type="submit" class="w-full btn-primary py-2.5 text-sm font-semibold">
                     Save Changes
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <div id="changeEmailModal" class="modal-backdrop hidden">
+        <div class="modal-content">
+            <button onclick="closeChangeEmailModal()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
+            <h2 class="text-2xl font-semibold text-gray-800 mb-2">Change Email Address</h2>
+            <p class="text-sm text-gray-500 mb-6">Enter your new email address to receive a verification code.</p>
+
+            <form id="changeEmailForm" class="space-y-4">
+                <div>
+                    <label for="new_email_modal" class="block text-sm font-medium text-gray-700 mb-1">New Email</label>
+                    <input id="new_email_modal" type="email" name="new_email" required
+                        class="w-full border-gray-300 rounded-lg shadow-sm focus:ring-[#56c8d8] focus:border-[#56c8d8] sm:text-sm p-2.5"
+                        placeholder="Enter your new email address">
+                </div>
+                <div class="flex items-center justify-between pt-2">
+                    <label for="email_otp_modal" class="text-sm font-medium text-gray-700">OTP Code</label>
+                    <button type="button" id="sendEmailOtpButton" onclick="sendOTPForEmailChange(event)"
+                        class="text-sm text-[#56c8d8] hover:underline font-medium">Send OTP</button>
+                </div>
+                <input id="email_otp_modal" type="text" name="otp" required
+                    class="w-full border-gray-300 rounded-lg shadow-sm focus:ring-[#56c8d8] focus:border-[#56c8d8] sm:text-sm p-2.5"
+                    placeholder="Enter OTP received by email">
+                <div id="emailOtpMessage" class="text-sm mt-1"></div>
+
+                <button type="submit" class="w-full btn-primary py-2.5 text-sm font-semibold">
+                    Verify & Change Email
                 </button>
             </form>
         </div>
@@ -639,145 +687,250 @@ $db->close(); // Close database connection
 
             // Handle clicks on navigation buttons
             navButtons.forEach(button => {
-                button.addEventListener('click', function() {
-                    const targetSectionId = this.dataset.section; // Get the section ID from data-section attribute
+                button.addEventListener('click', () => {
+                    const sectionId = button.dataset.section;
+                    showSection(sectionId);
+                    setActiveNavButton(sectionId);
 
-                    // All buttons now trigger section display
-                    showSection(targetSectionId);
-                    setActiveNavButton(targetSectionId);
-
-                    // Update URL hash for direct linking/refresh
-                    if (history.pushState) {
-                        history.pushState(null, null, '#' + targetSectionId);
-                    } else {
-                        window.location.hash = '#' + targetSectionId;
-                    }
+                    // Update URL hash to reflect active section (optional, but good for direct linking)
+                    history.pushState(null, '', `#${sectionId}`);
                 });
             });
 
-            // --- Initial Load Logic ---
-            // Determine which section to show on page load
-            const initialHash = window.location.hash.substring(1); // Get hash without '#'
-            const validSectionIds = Array.from(contentSections).map(section => section.id);
-            let sectionToShow = 'orders'; // Default section
-
-            if (initialHash && validSectionIds.includes(initialHash)) {
-                sectionToShow = initialHash; // Show section from hash if valid
+            // Read hash from URL on page load and activate corresponding section
+            const initialHash = window.location.hash.substring(1); // Remove '#'
+            if (initialHash && document.getElementById(initialHash)) {
+                showSection(initialHash);
+                setActiveNavButton(initialHash);
+            } else {
+                // Default to 'orders' section if no hash or invalid hash
+                showSection('orders');
+                setActiveNavButton('orders');
             }
 
-            // Show the determined section and set the active nav button on load
-            showSection(sectionToShow);
-            setActiveNavButton(sectionToShow);
-
-            // --- Modal Handling (Separate from section toggling) ---
-            // These functions are now only called by the buttons *within* the sections
-            // (e.g., the "Edit Profile" button inside the #edit-profile section)
-            function openModal(modalId) {
-                const modal = document.getElementById(modalId);
-                if (modal) {
-                    modal.classList.remove('hidden');
-                    // Use requestAnimationFrame for smoother transition start
-                    requestAnimationFrame(() => {
-                         modal.classList.add('visible'); // Use 'visible' class for opacity/transform
-                         modal.querySelector('.modal-content').classList.remove('scale-95');
-                    });
+            // Listen for hash changes (e.g., browser back/forward)
+            window.addEventListener('hashchange', () => {
+                const currentHash = window.location.hash.substring(1);
+                if (currentHash && document.getElementById(currentHash)) {
+                    showSection(currentHash);
+                    setActiveNavButton(currentHash);
                 }
-            }
-
-            function closeModal(modalId) {
-                const modal = document.getElementById(modalId);
-                if (modal) {
-                    modal.classList.remove('visible');
-                    modal.querySelector('.modal-content').classList.add('scale-95');
-                    // Hide completely after transition
-                    modal.addEventListener('transitionend', function handler() {
-                         modal.classList.add('hidden');
-                         modal.removeEventListener('transitionend', handler);
-                    });
-                }
-            }
-
-            // Add click listener to backdrop to close modal
-            document.querySelectorAll('.modal-backdrop').forEach(backdrop => {
-                backdrop.addEventListener('click', function(event) {
-                    if (event.target === this) { // Check if click is directly on the backdrop
-                         closeModal(this.id);
-                    }
-                });
             });
 
 
-            // Specific Modal Functions (called by inline onclick or JS event listeners)
-            // Made these global so they can be called from inline onclick attributes
+            // --- Modal Logic ---
+            const editProfileModal = document.getElementById('editProfileModal');
+            const changeEmailModal = document.getElementById('changeEmailModal');
+            const changePasswordModal = document.getElementById('changePasswordModal');
+
+            function openModal(modal) {
+                modal.classList.remove('hidden');
+                setTimeout(() => modal.classList.add('visible'), 10); // Trigger transition
+                document.body.classList.add('overflow-hidden'); // Prevent scrolling
+            }
+
+            function closeModal(modal) {
+                modal.classList.remove('visible');
+                setTimeout(() => {
+                    modal.classList.add('hidden');
+                    document.body.classList.remove('overflow-hidden'); // Re-enable scrolling
+                }, 300); // Wait for transition to finish
+            }
+
             window.openEditProfileModal = function(event) {
-                 if(event) event.preventDefault(); // Prevent default if called from link
-                 openModal('editProfileModal');
+                event.preventDefault();
+                openModal(editProfileModal);
             }
+
             window.closeEditProfileModal = function() {
-                 closeModal('editProfileModal');
+                closeModal(editProfileModal);
+            }
+
+            window.openChangeEmailModal = function(event) {
+                event.preventDefault();
+                openModal(changeEmailModal);
+            }
+
+            window.closeChangeEmailModal = function() {
+                closeModal(changeEmailModal);
             }
 
             window.openChangePasswordModal = function(event) {
-                 if(event) event.preventDefault(); // Prevent default if called from link
-                 openModal('changePasswordModal');
-            }
-             window.closeChangePasswordModal = function() {
-                 closeModal('changePasswordModal');
+                event.preventDefault();
+                openModal(changePasswordModal);
             }
 
-
-            // --- Auto-dismiss messages ---
-            function autoDismissMessages() {
-                const successMessage = document.getElementById('successMessage'); // For profile update
-                const errorMessage = document.getElementById('errorMessage');     // For profile update
-                const removeSuccessMessage = document.getElementById('removeSuccessMessage'); // For remove from likes
-                const removeErrorMessage = document.getElementById('removeErrorMessage');     // For remove from likes
-
-                if (successMessage) {
-                    setTimeout(() => { successMessage.style.display = 'none'; }, 5000);
-                }
-                if (errorMessage) {
-                    setTimeout(() => { errorMessage.style.display = 'none'; }, 5000);
-                }
-                if (removeSuccessMessage) {
-                    setTimeout(() => { removeSuccessMessage.style.display = 'none'; }, 5000);
-                }
-                if (removeErrorMessage) {
-                    setTimeout(() => { removeErrorMessage.style.display = 'none'; }, 5000);
-                }
+            window.closeChangePasswordModal = function() {
+                closeModal(changePasswordModal);
             }
-            autoDismissMessages(); // Call on page load
 
-             // --- Send OTP function ---
-            window.sendOTP = function() { // Make it a global function
-                const emailInput = document.querySelector('#changePasswordModal [name="email"]');
-                const email = emailInput.value.trim();
-                const otpMessageDiv = document.getElementById('otpMessage');
-                const sendOtpButton = document.getElementById('sendOtpButton');
+            // Close modals if clicking outside (on the backdrop)
+            editProfileModal.addEventListener('click', (e) => {
+                if (e.target === editProfileModal) closeModal(editProfileModal);
+            });
+            changeEmailModal.addEventListener('click', (e) => {
+                if (e.target === changeEmailModal) closeModal(changeEmailModal);
+            });
+            changePasswordModal.addEventListener('click', (e) => {
+                if (e.target === changePasswordModal) closeModal(changePasswordModal);
+            });
 
-                if (!email) {
-                    otpMessageDiv.textContent = 'Please enter your email address first.';
+
+            // --- OTP & Email Change Logic (using PHP Sessions on backend) ---
+            const sendEmailOtpButton = document.getElementById('sendEmailOtpButton');
+            const emailOtpMessageDiv = document.getElementById('emailOtpMessage');
+            const newEmailInput = document.getElementById('new_email_modal');
+            const emailOtpInput = document.getElementById('email_otp_modal');
+            const changeEmailForm = document.getElementById('changeEmailForm');
+
+            // Function to send OTP for email change
+            window.sendOTPForEmailChange = function(event) {
+                event.preventDefault();
+                const newEmail = newEmailInput.value;
+
+                if (!newEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail)) {
+                    emailOtpMessageDiv.textContent = 'Please enter a valid new email address.';
+                    emailOtpMessageDiv.className = 'text-sm mt-1 text-red-600';
+                    return;
+                }
+
+                sendEmailOtpButton.disabled = true;
+                sendEmailOtpButton.textContent = 'Sending...';
+                emailOtpMessageDiv.textContent = ''; // Clear previous messages
+
+                fetch('send_email_verification_otp.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: `new_email=${encodeURIComponent(newEmail)}`
+                })
+                .then(response => {
+                    if (!response.ok) {
+                         // Handle HTTP errors
+                         throw new Error(`HTTP error! status: ${response.status}`);
+                     }
+                     return response.json(); // Expecting JSON response
+                })
+                .then(data => {
+                    if (data.success) {
+                        emailOtpMessageDiv.textContent = 'OTP sent! Check your email. It might be in spam.';
+                        emailOtpMessageDiv.className = 'text-sm mt-1 text-green-600';
+                    } else {
+                        emailOtpMessageDiv.textContent = data.message || 'Failed to send OTP. Please try again.';
+                        emailOtpMessageDiv.className = 'text-sm mt-1 text-red-600';
+                         console.error("Send OTP Error: " + (data.message || 'Unknown error')); // Log server-side message
+                    }
+                })
+                .catch(error => {
+                    console.error('Error sending OTP:', error);
+                    emailOtpMessageDiv.textContent = 'An error occurred. Failed to send OTP.';
+                    emailOtpMessageDiv.className = 'text-sm mt-1 text-red-600';
+                     console.error("Send OTP Fetch Error: " + error); // Log fetch error
+                })
+                .finally(() => {
+                     sendEmailOtpButton.disabled = false;
+                     sendEmailOtpButton.textContent = 'Resend OTP';
+                });
+            }
+
+            // Handle submission of the email change form
+            changeEmailForm.addEventListener('submit', function(event) {
+                event.preventDefault(); // Prevent default form submission
+
+                const enteredOtp = emailOtpInput.value;
+                const newEmail = newEmailInput.value; // The new email is passed to the backend, but the backend will use the session's new_email_pending
+
+                if (!enteredOtp) {
+                    emailOtpMessageDiv.textContent = 'Please enter the OTP.';
+                    emailOtpMessageDiv.className = 'text-sm mt-1 text-red-600';
+                    return;
+                }
+
+                if (!newEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail)) {
+                    // This case should ideally be caught by sendOTPForEmailChange, but as a fallback
+                    emailOtpMessageDiv.textContent = 'Please provide the new email address.';
+                    emailOtpMessageDiv.className = 'text-sm mt-1 text-red-600';
+                    return;
+                }
+
+                // Disable button and show loading
+                const submitButton = changeEmailForm.querySelector('button[type="submit"]');
+                submitButton.disabled = true;
+                submitButton.textContent = 'Verifying...';
+                emailOtpMessageDiv.textContent = ''; // Clear previous messages
+
+                fetch('update_email_with_otp.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: `otp=${encodeURIComponent(enteredOtp)}&new_email_submitted=${encodeURIComponent(newEmail)}` // Pass new email for backend consistency, though session is source
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.success) {
+                        emailOtpMessageDiv.textContent = 'Email updated successfully!';
+                        emailOtpMessageDiv.className = 'text-sm mt-1 text-green-600';
+                        // Optionally, refresh the page or update the displayed email
+                        setTimeout(() => {
+                            closeChangeEmailModal();
+                            window.location.reload(); // Reload to show updated email
+                        }, 1500);
+                    } else {
+                        emailOtpMessageDiv.textContent = data.message || 'Failed to update email. Please try again.';
+                        emailOtpMessageDiv.className = 'text-sm mt-1 text-red-600';
+                        console.error("Verify & Change Email Error: " + (data.message || 'Unknown error'));
+                    }
+                })
+                .catch(error => {
+                    console.error('Error during email change:', error);
+                    emailOtpMessageDiv.textContent = 'An error occurred. Failed to update email.';
+                    emailOtpMessageDiv.className = 'text-sm mt-1 text-red-600';
+                })
+                .finally(() => {
+                    submitButton.disabled = false;
+                    submitButton.textContent = 'Verify & Change Email';
+                });
+            });
+
+
+            // --- OTP Password Change Logic (using PHP Sessions on backend for password change) ---
+            const sendOtpButton = document.getElementById('sendOtpButton');
+            const otpMessageDiv = document.getElementById('otpMessage');
+            const emailPasswordInput = document.getElementById('email_password_modal');
+            const changePasswordForm = document.getElementById('changePasswordForm');
+
+            window.sendOTP = function() {
+                const email = emailPasswordInput.value;
+
+                if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+                    otpMessageDiv.textContent = 'Please enter a valid email address.';
                     otpMessageDiv.className = 'text-sm mt-1 text-red-600';
                     return;
                 }
 
                 sendOtpButton.disabled = true;
                 sendOtpButton.textContent = 'Sending...';
-                otpMessageDiv.textContent = 'Sending OTP...';
-                otpMessageDiv.className = 'text-sm mt-1 text-gray-600';
+                otpMessageDiv.textContent = ''; // Clear previous messages
 
-
-                fetch('send_otp_phpmailer.php', { // Ensure this path is correct
+                fetch('send_password_reset_otp.php', { // This should be a separate endpoint for password OTP
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                    body: 'email=' + encodeURIComponent(email)
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: `email=${encodeURIComponent(email)}`
                 })
                 .then(response => {
-                     if (!response.ok) {
-                         // Handle HTTP errors
+                    if (!response.ok) {
                          throw new Error(`HTTP error! status: ${response.status}`);
                      }
-                     return response.json(); // Expecting JSON response
+                     return response.json();
                 })
                 .then(data => {
                     if (data.success) {
@@ -786,14 +939,12 @@ $db->close(); // Close database connection
                     } else {
                         otpMessageDiv.textContent = data.message || 'Failed to send OTP. Please try again.';
                         otpMessageDiv.className = 'text-sm mt-1 text-red-600';
-                         console.error("Send OTP Error: " + (data.message || 'Unknown error')); // Log server-side message
                     }
                 })
                 .catch(error => {
                     console.error('Error sending OTP:', error);
                     otpMessageDiv.textContent = 'An error occurred. Failed to send OTP.';
                     otpMessageDiv.className = 'text-sm mt-1 text-red-600';
-                     console.error("Send OTP Fetch Error: " + error); // Log fetch error
                 })
                 .finally(() => {
                      sendOtpButton.disabled = false;

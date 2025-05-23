@@ -7,19 +7,35 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $name = trim($_POST['name']);
-    $category = trim($_POST['category']);
-    // Auto-map category to gift_category
-    $giftMap = [
-        'Watches'     => 'Gifts for Him',
-        'Wallets'     => 'Gifts for Him',
-        'Jewellery'   => 'Gifts for Her',
-        'Kids'        => 'Gifts for Kids',
-        'PhoneCase'   => 'Tech Gifts',
-        'Home Decor'  => 'Home & Decor',
-        'Crockery'    => 'Home & Decor',
-        'Soft Toys'   => 'Gifts for Her'
-    ];
-    $gift_category = $giftMap[$category] ?? 'General';
+
+    // --- START: Updated Category Logic ---
+    $category = '';
+    if (isset($_POST['category']) && $_POST['category'] === 'new_category_option') {
+        // If "Add New Category" was selected, use the value from the new_category input
+        if (isset($_POST['new_category']) && !empty(trim($_POST['new_category']))) {
+            $category = trim($_POST['new_category']);
+        } else {
+            // Handle error if new category name is empty when "Add New Category" is selected
+            die("New category name is required when 'Add New Category' is selected.");
+        }
+    } else if (isset($_POST['category']) && !empty(trim($_POST['category']))) {
+        // Otherwise, use the selected existing category
+        $category = trim($_POST['category']);
+    } else {
+        // Handle error if no category is selected or entered
+        die("Product category is required.");
+    }
+    // --- END: Updated Category Logic ---
+
+    // --- START: Updated Gift Category Logic ---
+    $gift_category = '';
+    if (isset($_POST['gift_category']) && !empty(trim($_POST['gift_category']))) {
+        $gift_category = trim($_POST['gift_category']);
+    } else {
+        // Handle error if no gift category is selected
+        die("Gift category is required.");
+    }
+    // --- END: Updated Gift Category Logic ---
 
     $description = trim($_POST['description']);
 
@@ -65,9 +81,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $stmt->close();
     $conn->close();
 }
-echo "<pre>";
-print_r($_FILES);
-echo "</pre>";
-exit();
+// The print_r($_FILES) and exit() lines below are for debugging and should be removed in production
+// echo "<pre>";
+// print_r($_FILES);
+// echo "</pre>";
+// exit();
 
 ?>

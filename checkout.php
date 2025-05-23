@@ -20,6 +20,7 @@ $email = $_POST['email'] ?? ($_SESSION['email'] ?? '');
 
 // Fetch user's existing details from the database for pre-filling the form
 $user_details = [];
+// REMOVED 'address' from this SELECT, as per user's clarification that 'users' table has no address column.
 $stmt_user = $conn->prepare("SELECT email, fname, lname, phone FROM users WHERE id = ?");
 if ($stmt_user) {
   $stmt_user->bind_param("i", $user_id);
@@ -33,10 +34,14 @@ if ($stmt_user) {
 
 // Shipping Options (You can fetch these from a database table if more complex)
 $shipping_options = [
+  'none' => ['name' => 'No Shipping (Pickup)', 'cost' => 0.00], // New "No Shipping" option
   'standard' => ['name' => 'Standard Shipping (5-7 days)', 'cost' => 500.00],
   'express' => ['name' => 'Express Shipping (1-2 days)', 'cost' => 1500.00]
 ];
-$selected_shipping_cost = 0; // Default to 0 or a pre-selected option
+
+// Initialize selected_shipping_cost to 0 (for initial display before form submission)
+$selected_shipping_cost = 0;
+$selected_shipping_method_key = 'none'; // Default selected method
 
 // Initialize shopping cart and calculate subtotal
 $shopping_cart = $_SESSION["shopping_cart"] ?? [];
@@ -45,7 +50,7 @@ foreach ($shopping_cart as $item) {
   $subtotal += $item["item_price"] * $item["item_quantity"];
 }
 
-$total = $subtotal + $selected_shipping_cost; // Initialize total
+$total = $subtotal + $selected_shipping_cost; // Initial total before form submission
 
 // Handle form submission
 if (isset($_POST['submit']) && !empty($shopping_cart)) {
@@ -71,10 +76,14 @@ if (isset($_POST['submit']) && !empty($shopping_cart)) {
     $fname = $_POST["fname"] ?? $user_details['fname'] ?? '';
     $lname = $_POST["lname"] ?? $user_details['lname'] ?? '';
     $phone = $_POST["phone"] ?? $user_details['phone'] ?? '';
-    $address = $_POST["address"] ?? $user_details['address'] ?? '';
+    // Address is now ONLY taken from POST, as it's not in user_details from DB
+    $address = $_POST["address"] ?? '';
     $full_name = trim("$fname $lname");
-    $selected_shipping_option = $_POST['shipping_method'] ?? 'standard';
-    $selected_shipping_cost = $shipping_options[$selected_shipping_option]['cost'] ?? 0;
+
+    // Get selected shipping method from POST, default to 'none' if not set or invalid
+    $selected_shipping_method_key = $_POST['shipping_method'] ?? 'none';
+    $selected_shipping_cost = $shipping_options[$selected_shipping_method_key]['cost'] ?? 0; // Ensure cost is 0 if method is invalid
+
     $payment_method = $_POST['payment_method'] ?? 'cod'; // Default to Cash on Delivery
 
     // Recalculate total with selected shipping
@@ -84,7 +93,15 @@ if (isset($_POST['submit']) && !empty($shopping_cart)) {
     $stmt = $conn->prepare("INSERT INTO orders
             (user_id, user_name, email, phone, address, total_price, order_status)
             VALUES (?, ?, ?, ?, ?, ?, 'processing')");
-    $stmt->bind_param("isssds", $user_id, $full_name, $email, $phone, $address, $total);
+    // CORRECTED: Changed 'd' (double) for address to 's' (string) and 's' for total_price to 'd' (double)
+    // The type string 'issssd' matches:
+    // i: user_id (integer)
+    // s: user_name (string)
+    // s: email (string)
+    // s: phone (string)
+    // s: address (string)
+    // d: total_price (double)
+    $stmt->bind_param("issssd", $user_id, $full_name, $email, $phone, $address, $total);
     $stmt->execute();
     $order_id = $stmt->insert_id;
     $stmt->close();
@@ -185,8 +202,7 @@ if (isset($_POST['submit']) && !empty($shopping_cart)) {
       const shippingCosts = {
         <?php foreach ($shipping_options as $key => $option): ?>
                       '<?= $key ?>': <?= $option['cost'] ?>,
-        <?php endforeach; ?>
-        };
+        <?php endforeach; ?>};
 
       function updateOrderSummary() {
         let currentShippingCost = 0;
@@ -309,6 +325,34 @@ if (isset($_POST['submit']) && !empty($shopping_cart)) {
             <textarea id="address" name="address" rows="3" required
               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-turquoise-primary focus:border-turquoise-primary"><?= htmlspecialchars($user_details['address'] ?? '') ?></textarea>
           </div>
+
+          <div class="mt-6">
+            <label class="block mb-2 font-semibold text-gray-700">Shipping Method <span
+                class="text-red-500">*</span></label>
+            <div class="space-y-3">
+              <?php foreach ($shipping_options as $key => $option): ?>
+                <label class="flex items-center p-4 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+                  <input type="radio" name="shipping_method" value="<?= $key ?>"
+                    class="form-radio h-5 w-5 text-turquoise-primary focus:ring-turquoise-primary"
+                    <?= ($key === $selected_shipping_method_key) ? 'checked' : '' ?>>
+                  <span class="ml-3 text-gray-800 font-medium"><?= htmlspecialchars($option['name']) ?></span>
+                  <span class="ml-auto text-gray-600">DA <?= number_format($option['cost'], 2) ?></span>
+                </label>
+              <?php endforeach; ?>
+            </div>
+          </div>
+
+          <div class="mt-6">
+            <label class="block mb-2 font-semibold text-gray-700">Payment Method <span
+                class="text-red-500">*</span></label>
+            <div class="space-y-3">
+              <label class="flex items-center p-4 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+                <input type="radio" name="payment_method" value="cod" class="form-radio h-5 w-5 text-turquoise-primary focus:ring-turquoise-primary" checked>
+                <span class="ml-3 text-gray-800 font-medium">Cash on Delivery (COD)</span>
+              </label>
+              </div>
+          </div>
+
 
           <div class="mt-8 text-right">
             <button type="submit" name="submit"

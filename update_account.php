@@ -1,48 +1,82 @@
 <?php
 session_start();
+header('Content-Type: application/json'); // Set header for JSON response
 
-if (!isset($_SESSION['id'])) {
-    header("Location: login.php");
+if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
+    echo json_encode(['success' => false, 'message' => 'Unauthorized access.']);
     exit();
 }
 
-$user_id = $_SESSION['id'];
-$new_username = trim($_POST['username']);
-$new_fname = trim($_POST['first_name']);
-$new_lname = trim($_POST['last_name']);
-$new_phone = trim($_POST['phone_number']);
-$new_email = trim($_POST['email']);
-
-$conn = new mysqli("localhost", "root", "", "giftstore");
-if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
-}
-
-// Check if the username is taken by another user
-$check_stmt = $conn->prepare("SELECT id FROM users WHERE username = ? AND id != ?");
-$check_stmt->bind_param("si", $new_username, $user_id);
-$check_stmt->execute();
-$check_stmt->store_result();
-
-if ($check_stmt->num_rows > 0) {
-    $check_stmt->close();
-    header("Location: my_account.php?error=username_taken");
+$db = new mysqli("localhost", "root", "", "giftstore");
+if ($db->connect_error) {
+    error_log("Database Connection failed in update_product.php: " . $db->connect_error);
+    echo json_encode(['success' => false, 'message' => 'Database connection failed.']);
     exit();
 }
-$check_stmt->close();
+$db->set_charset("utf8mb4");
 
-// Update user info
-$stmt = $conn->prepare("UPDATE users SET username = ?, fname = ?, lname = ?, phone = ?, email = ? WHERE id = ?");
-$stmt->bind_param("sssisi", $new_username, $new_fname, $new_lname, $new_phone, $new_email, $user_id);
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $id = $_POST['id'] ?? null;
+    $name = trim($_POST['name'] ?? '');
+    $category = trim($_POST['category'] ?? '');
+    $description = trim($_POST['description'] ?? ''); // Ensure description is captured
+    $price = floatval($_POST['price'] ?? 0);
+    $stock = intval($_POST['stock'] ?? 0);
 
-if ($stmt->execute()) {
-    $_SESSION['username'] = $new_username;
-    header("Location: my_account.php?updated=1");
-    exit();
+    if (empty($id) || empty($name) || empty($category) || empty($description) || !isset($price) || !isset($stock)) {
+        echo json_encode(['success' => false, 'message' => 'Missing required product data.']);
+        $db->close();
+        exit();
+    }
+
+    // Handle image upload if a new image is provided
+    $image_path = null;
+    if (isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
+        $upload_dir = 'uploads/'; // Make sure this directory exists and is writable
+        $image_name = basename($_FILES['image']['name']);
+        // Create a unique filename to prevent overwrites
+        $image_path = $upload_dir . uniqid() . '_' . preg_replace("/[^a-zA-Z0-9.-]/", "_", $image_name);
+
+        if (!move_uploaded_file($_FILES['image']['tmp_name'], $image_path)) {
+            error_log("Failed to move uploaded file for product ID: " . $id);
+            echo json_encode(['success' => false, 'message' => 'Failed to upload image.']);
+            $db->close();
+            exit();
+        }
+    }
+
+    // Prepare the SQL statement based on whether an image was uploaded
+    if ($image_path) {
+        $stmt = $db->prepare("UPDATE products SET name=?, description=?, category=?, price=?, stock=?, image=? WHERE id=?");
+        if (!$stmt) {
+            error_log("Update product (with image) prepare failed: " . $db->error);
+            echo json_encode(['success' => false, 'message' => 'Database error during update preparation.']);
+            $db->close();
+            exit();
+        }
+        $stmt->bind_param("sssdssi", $name, $description, $category, $price, $stock, $image_path, $id);
+    } else {
+        $stmt = $db->prepare("UPDATE products SET name=?, description=?, category=?, price=?, stock=? WHERE id=?");
+        if (!$stmt) {
+            error_log("Update product (no image) prepare failed: " . $db->error);
+            echo json_encode(['success' => false, 'message' => 'Database error during update preparation.']);
+            $db->close();
+            exit();
+        }
+        $stmt->bind_param("ssdsii", $name, $description, $category, $price, $stock, $id);
+    }
+
+    if ($stmt->execute()) {
+        echo json_encode(['success' => true, 'message' => 'Product updated successfully!']);
+    } else {
+        error_log("Update product execute failed: " . $stmt->error);
+        echo json_encode(['success' => false, 'message' => 'Failed to update product.']);
+    }
+
+    $stmt->close();
 } else {
-    echo "Update failed: " . $stmt->error;
+    echo json_encode(['success' => false, 'message' => 'Invalid request method.']);
 }
 
-$stmt->close();
-$conn->close();
+$db->close();
 ?>
